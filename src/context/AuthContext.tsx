@@ -1,0 +1,70 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { User, UserRole } from '../types';
+
+interface AuthContextType {
+  user: User | null;
+  isLoading: boolean;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => void;
+  setUser: (user: User) => void;
+}
+
+const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Initialize from localStorage
+  useEffect(() => {
+    const storedUser = localStorage.getItem('user');
+    if (storedUser) {
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch (e) {
+        console.error('Failed to parse stored user');
+      }
+    }
+    setIsLoading(false);
+  }, []);
+
+  const login = async (email: string, password: string) => {
+    setIsLoading(true);
+    try {
+      // This will be called by the login page
+      // The actual API call happens in LoginPage
+      setIsLoading(false);
+    } catch (error) {
+      setIsLoading(false);
+      throw error;
+    }
+  };
+
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+    localStorage.removeItem('accessToken');
+  };
+
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        isLoading,
+        login,
+        logout,
+        setUser,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
