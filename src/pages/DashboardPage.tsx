@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { TrendingUp, Users, Image, CheckCircle, Upload } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, Users, Image, CheckCircle, Upload, Copy, Check } from 'lucide-react';
 import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
 import PhotoGrid from '../components/PhotoGrid';
@@ -8,8 +8,21 @@ import { Photo } from '../types';
 
 const DashboardPage: React.FC = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
   const stats = mockStatsData;
   const recentPhotos = mockPhotos.slice(0, 10);
+
+  // 시설 정보 가져오기
+  const facility = JSON.parse(localStorage.getItem('facility') || '{}');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const facilityName = facility.name || '서울 행복 요양원';
+  const facilityCode = facility.code || 'FAC-DEMO01';
+
+  const handleCopyCode = () => {
+    navigator.clipboard.writeText(facilityCode);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 2000);
+  };
 
   return (
     <Layout>
@@ -18,7 +31,17 @@ const DashboardPage: React.FC = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">대시보드</h1>
-            <p className="text-gray-600 mt-1">서울 행복 요양원</p>
+            <div className="flex items-center gap-3 mt-1">
+              <p className="text-gray-600">{facilityName}</p>
+              <span className="text-gray-300">|</span>
+              <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-md">
+                <span className="text-xs text-gray-500">시설코드:</span>
+                <code className="text-xs font-mono font-bold text-primary">{facilityCode}</code>
+                <button onClick={handleCopyCode} className="text-gray-400 hover:text-primary transition ml-0.5" title="코드 복사">
+                  {codeCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                </button>
+              </div>
+            </div>
           </div>
           <button
             onClick={() => setShowUploadModal(true)}
