@@ -7,8 +7,13 @@ import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ResidentsPage from './pages/ResidentsPage';
 import PhotosPage from './pages/PhotosPage';
+import GuardianManagePage from './pages/GuardianManagePage';
 import GuardianGalleryPage from './pages/GuardianGalleryPage';
 import RegisterPage from './pages/RegisterPage';
+import KakaoCallbackPage from './pages/KakaoCallbackPage';
+import SelectRolePage from './pages/SelectRolePage';
+import SharedPhotoPage from './pages/SharedPhotoPage';
+import GuardianMyPage from './pages/GuardianMyPage';
 
 const App: React.FC = () => {
   return (
@@ -18,6 +23,9 @@ const App: React.FC = () => {
           {/* Public Routes */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
+          <Route path="/select-role" element={<SelectRolePage />} />
+          <Route path="/shared/:shareToken" element={<SharedPhotoPage />} />
 
           {/* Staff Routes */}
           <Route
@@ -44,6 +52,14 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/guardian-manage"
+            element={
+              <ProtectedRoute requiredRole="staff">
+                <GuardianManagePage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Guardian Routes */}
           <Route
@@ -51,6 +67,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute requiredRole="guardian">
                 <GuardianGalleryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/guardian/mypage"
+            element={
+              <ProtectedRoute requiredRole="guardian">
+                <GuardianMyPage />
               </ProtectedRoute>
             }
           />

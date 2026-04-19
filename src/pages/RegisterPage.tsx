@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { apiClient } from '../utils/api';
 import { Mail, Lock, User, Phone, ArrowLeft, Building2, MapPin } from 'lucide-react';
 
 type Role = 'admin' | 'staff' | 'guardian';
@@ -8,7 +9,7 @@ type Role = 'admin' | 'staff' | 'guardian';
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const { setUser } = useAuth();
-  const [step, setStep] = useState<1 | 2>(1); // step 1: 역할 선택, step 2: 정보 입력
+  const [step, setStep] = useState<1 | 2>(1);
   const [role, setRole] = useState<Role>('admin');
 
   // 공통
@@ -26,10 +27,6 @@ const RegisterPage: React.FC = () => {
   // 시설 직원 전용
   const [facilityCode, setFacilityCode] = useState('');
 
-  // 보호자 전용
-  const [residentName, setResidentName] = useState('');
-  const [residentFacilityCode, setResidentFacilityCode] = useState('');
-
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
@@ -46,10 +43,6 @@ const RegisterPage: React.FC = () => {
       if (!facilityAddress.trim()) return '시설 주소를 입력해주세요.';
     }
     if (role === 'staff' && !facilityCode.trim()) return '시설 코드를 입력해주세요.';
-    if (role === 'guardian') {
-      if (!residentName.trim()) return '입소자 이름을 입력해주세요.';
-      if (!residentFacilityCode.trim()) return '시설 코드를 입력해주세요.';
-    }
     return null;
   };
 
@@ -66,48 +59,54 @@ const RegisterPage: React.FC = () => {
     setIsLoading(true);
 
     try {
-      // 시설 관리자인 경우 시설 코드 생성
-      const generatedFacilityCode = `FAC-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      let response;
 
-      const mockUser = {
-        id: `${role}-${Date.now()}`,
-        email,
-        name,
-        role: role === 'admin' ? 'staff' : role, // admin도 staff로 저장 (관리자 권한 포함)
-        isAdmin: role === 'admin',
-        facilityId: role !== 'guardian' ? 'fac-001' : undefined,
-        facility: role === 'admin' ? {
-          name: facilityName,
-          address: facilityAddress,
-          phone: facilityPhone,
-          code: generatedFacilityCode,
-        } : undefined,
-      };
-
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      localStorage.setItem('accessToken', 'demo-token-' + Date.now());
-
-      // 시설 관리자인 경우 시설 정보도 저장
       if (role === 'admin') {
-        localStorage.setItem('facility', JSON.stringify({
-          id: 'fac-001',
-          name: facilityName,
-          address: facilityAddress,
-          phone: facilityPhone,
-          code: generatedFacilityCode,
-          createdAt: new Date().toISOString(),
-        }));
+        response = await apiClient.registerAdmin({
+          email,
+          password,
+          name,
+          phone: phone || undefined,
+          facilityName,
+          facilityAddress,
+          facilityPhone: facilityPhone || undefined,
+        });
+      } else if (role === 'staff') {
+        response = await apiClient.registerStaff({
+          email,
+          password,
+          name,
+          phone: phone || undefined,
+          facilityCode,
+        });
+      } else {
+        response = await apiClient.registerGuardian({
+          email,
+          password,
+          name,
+          phone: phone || undefined,
+        });
       }
 
-      setUser(mockUser);
+      const { accessToken, user: userData, facility } = response.data;
 
-      if (role === 'guardian') {
+      // 로컬 스토리지에 저장
+      localStorage.setItem('accessToken', accessToken);
+      localStorage.setItem('user', JSON.stringify(userData));
+      if (facility) {
+        localStorage.setItem('facility', JSON.stringify(facility));
+      }
+
+      setUser(userData);
+
+      if (userData.role === 'guardian') {
         navigate('/guardian');
       } else {
         navigate('/dashboard');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || '가입에 실패했습니다. 다시 시도해주세요.');
+      const msg = err.response?.data?.detail || '가입에 실패했습니다. 다시 시도해주세요.';
+      setError(msg);
     } finally {
       setIsLoading(false);
     }
@@ -216,7 +215,6 @@ const RegisterPage: React.FC = () => {
               </div>
             )}
 
-            {/* 관리자 본인 정보 헤더 */}
             {role === 'admin' && (
               <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2 pt-1">
                 <User size={16} /> 관리자 계정 정보
@@ -267,23 +265,14 @@ const RegisterPage: React.FC = () => {
               </div>
             )}
 
-            {/* 보호자: 시설 코드 + 입소자 이름 */}
+            {/* 보호자: 가입 후 별도로 열람 요청 안내 */}
             {role === 'guardian' && (
-              <>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">시설 코드</label>
-                  <input type="text" value={residentFacilityCode} onChange={(e) => setResidentFacilityCode(e.target.value)}
-                    placeholder="시설에서 안내받은 코드 (예: FAC-A1B2C3)"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-900 mb-1">입소자 이름 (보호 대상)</label>
-                  <input type="text" value={residentName} onChange={(e) => setResidentName(e.target.value)}
-                    placeholder="어머님 또는 아버님 성함"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
-                  <p className="text-xs text-gray-400 mt-1">시설에 입소 중인 보호 대상자의 이름을 입력하세요</p>
-                </div>
-              </>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <p className="text-xs text-blue-700">
+                  가입 시 <strong>전화번호</strong>를 꼭 입력해주세요.
+                  시설에서 해당 번호로 초대를 보내면 로그인 후 수락하여 사진을 열람할 수 있습니다.
+                </p>
+              </div>
             )}
 
             {/* 비밀번호 */}

@@ -5,7 +5,11 @@ export interface User {
   email: string;
   name: string;
   role: UserRole;
-  facilityId?: string;
+  is_admin?: boolean;
+  facility_id?: string;
+  phone?: string;
+  is_active?: boolean;
+  created_at?: string;
 }
 
 export interface Facility {
@@ -13,42 +17,56 @@ export interface Facility {
   name: string;
   address: string;
   phone: string;
-  createdAt: string;
+  code: string;
+  created_at?: string;
 }
 
 export interface Resident {
   id: string;
-  facilityId: string;
+  facility_id: string;
   name: string;
-  dateOfBirth: string;
-  admissionDate: string;
-  status: 'active' | 'inactive';
-  guardianId?: string;
+  birth_date?: string;
+  gender?: string;
+  room_number?: string;
+  medical_notes?: string;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface MatchedResident {
+  resident_id: string;
+  resident_name?: string;
+  confidence?: number;
 }
 
 export interface Photo {
   id: string;
-  facilityId: string;
-  fileName: string;
-  url: string;
-  uploadedAt: string;
-  uploadedBy: string;
-  residentIds: string[];
-  residentNames: string[];
-  classified: boolean;
-  thumbnail?: string;
+  facility_id: string;
+  resident_id?: string;
+  original_url: string;
+  thumbnail_url?: string;
+  is_processed: boolean;
+  processing_status: string;
+  created_at: string;
+  matched_residents?: MatchedResident[];
+  is_public?: boolean;
+  like_count?: number;
+  liked_by_me?: boolean;
 }
 
 export interface Guardian {
   id: string;
-  email: string;
-  name: string;
-  residentIds: string[];
+  user_id: string;
+  resident_id: string;
+  relationship_type?: string;
+  created_at: string;
 }
 
 export interface AuthResponse {
   accessToken: string;
   user: User;
+  facility?: Facility;
 }
 
 export interface StatsData {
@@ -57,4 +75,6 @@ export interface StatsData {
   totalResidents: number;
   classifiedPhotos: number;
   classificationRate: number;
+  facilityName: string;
+  facilityCode: string;
 }

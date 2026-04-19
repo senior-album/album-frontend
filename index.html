@@ -9,6 +9,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Kakao SDK for sharing -->
+    <script src="https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js" crossorigin="anonymous"></script>
+    <script>
+      // 카카오 SDK 초기화 (developers.kakao.com에서 JavaScript 키 등록 후 교체)
+      if (window.Kakao && !window.Kakao.isInitialized()) {
+        // TODO: 실제 JavaScript 키로 교체
+        // window.Kakao.init('YOUR_KAKAO_JAVASCRIPT_KEY');
+      }
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -9,9 +9,20 @@ const LoginPage: React.FC = () => {
   const { setUser } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [role, setRole] = useState<'staff' | 'guardian'>('staff');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [kakaoLoading, setKakaoLoading] = useState(false);
+
+  const handleKakaoLogin = async () => {
+    setKakaoLoading(true);
+    try {
+      const response = await apiClient.getKakaoLoginUrl();
+      window.location.href = response.data.login_url;
+    } catch (err: any) {
+      setError(err.response?.data?.detail || '카카오 로그인을 시작할 수 없습니다.');
+      setKakaoLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -20,10 +31,13 @@ const LoginPage: React.FC = () => {
 
     try {
       const response = await apiClient.login(email, password);
-      const { accessToken, user } = response.data;
+      const { accessToken, user, facility } = response.data;
 
       localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('user', JSON.stringify(user));
+      if (facility) {
+        localStorage.setItem('facility', JSON.stringify(facility));
+      }
 
       setUser(user);
 
@@ -33,31 +47,9 @@ const LoginPage: React.FC = () => {
         navigate('/guardian');
       }
     } catch (err: any) {
-      setError(err.response?.data?.message || '로그인 실패. 다시 시도해주세요.');
+      setError(err.response?.data?.detail || '로그인 실패. 다시 시도해주세요.');
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const handleDemoLogin = (demoRole: 'staff' | 'guardian') => {
-    // Demo login with mock data
-    const mockUser = {
-      id: demoRole === 'staff' ? 'staff-001' : 'gua-001',
-      email: demoRole === 'staff' ? 'staff@example.com' : 'guardian@example.com',
-      name: demoRole === 'staff' ? '이순신 직원' : '김지은',
-      role: demoRole,
-      facilityId: demoRole === 'staff' ? 'fac-001' : undefined,
-    };
-
-    localStorage.setItem('user', JSON.stringify(mockUser));
-    localStorage.setItem('accessToken', 'demo-token-' + Date.now());
-
-    setUser(mockUser);
-
-    if (demoRole === 'staff') {
-      navigate('/dashboard');
-    } else {
-      navigate('/guardian');
     }
   };
 
@@ -76,35 +68,6 @@ const LoginPage: React.FC = () => {
         {/* Login Card */}
         <div className="bg-white rounded-2xl shadow-soft-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Role Selection */}
-            <div className="space-y-3 mb-6">
-              <label className="block text-sm font-semibold text-gray-900">역할 선택</label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => setRole('staff')}
-                  className={`p-3 rounded-lg border-2 transition font-medium ${
-                    role === 'staff'
-                      ? 'border-primary bg-blue-50 text-primary'
-                      : 'border-gray-200 text-gray-600 hover:border-primary'
-                  }`}
-                >
-                  시설 직원
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setRole('guardian')}
-                  className={`p-3 rounded-lg border-2 transition font-medium ${
-                    role === 'guardian'
-                      ? 'border-primary bg-blue-50 text-primary'
-                      : 'border-gray-200 text-gray-600 hover:border-primary'
-                  }`}
-                >
-                  보호자
-                </button>
-              </div>
-            </div>
-
             {/* Email */}
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-2">
@@ -157,32 +120,35 @@ const LoginPage: React.FC = () => {
             </button>
           </form>
 
-          {/* Demo Login */}
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <p className="text-center text-sm text-gray-600 mb-3">
-              데모로 둘러보기
-            </p>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('staff')}
-                className="py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                직원 데모
-              </button>
-              <button
-                type="button"
-                onClick={() => handleDemoLogin('guardian')}
-                className="py-2 px-4 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition"
-              >
-                보호자 데모
-              </button>
+          {/* Divider */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-200" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-3 bg-white text-gray-400">또는</span>
             </div>
           </div>
 
+          {/* Kakao Login */}
+          <button
+            onClick={handleKakaoLogin}
+            disabled={kakaoLoading}
+            className="w-full flex items-center justify-center gap-3 py-2.5 rounded-lg font-semibold transition disabled:opacity-50"
+            style={{ backgroundColor: '#FEE500', color: '#191919' }}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 3C6.48 3 2 6.48 2 10.5c0 2.55 1.68 4.8 4.22 6.13-.18.65-.67 2.35-.77 2.72-.12.46.17.45.36.33.15-.1 2.37-1.6 3.35-2.25.6.09 1.22.13 1.84.13 5.52 0 10-3.48 10-7.77S17.52 3 12 3z"
+                fill="#191919"
+              />
+            </svg>
+            {kakaoLoading ? '연결 중...' : '카카오로 시작하기'}
+          </button>
+
           {/* Footer */}
           <div className="mt-6 text-center text-xs text-gray-500">
-            <p>아직 계정이 없으신가요? <Link to="/register" className="text-primary font-medium hover:underline">가입하기</Link></p>
+            <p>아직 계정이 없으신가요? <Link to="/register" className="text-primary font-medium hover:underline">이메일로 가입하기</Link></p>
           </div>
         </div>
 

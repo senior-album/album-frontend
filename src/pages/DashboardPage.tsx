@@ -1,22 +1,48 @@
-import React, { useState, useEffect } from 'react';
-import { TrendingUp, Users, Image, CheckCircle, Upload, Copy, Check } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { TrendingUp, Users, Image, CheckCircle, Upload, Copy, Check, Loader2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
-import PhotoGrid from '../components/PhotoGrid';
-import { mockStatsData, mockPhotos } from '../utils/mockData';
-import { Photo } from '../types';
+import { apiClient } from '../utils/api';
+
+interface DashboardStats {
+  totalPhotos: number;
+  photosToday: number;
+  totalResidents: number;
+  classifiedPhotos: number;
+  classificationRate: number;
+  facilityName: string;
+  facilityCode: string;
+}
 
 const DashboardPage: React.FC = () => {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
-  const stats = mockStatsData;
-  const recentPhotos = mockPhotos.slice(0, 10);
+  const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [dragOver, setDragOver] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 시설 정보 가져오기
   const facility = JSON.parse(localStorage.getItem('facility') || '{}');
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const facilityName = facility.name || '서울 행복 요양원';
-  const facilityCode = facility.code || 'FAC-DEMO01';
+  const facilityId = user.facility_id || facility.id;
+  const facilityName = stats?.facilityName || facility.name || '시설 이름';
+  const facilityCode = stats?.facilityCode || facility.code || '';
+
+  const fetchStats = useCallback(async () => {
+    if (!facilityId) { setLoading(false); return; }
+    try {
+      const response = await apiClient.getFacilityStats(facilityId);
+      setStats(response.data);
+    } catch (err) {
+      console.error('Failed to fetch dashboard stats:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [facilityId]);
+
+  useEffect(() => { fetchStats(); }, [fetchStats]);
 
   const handleCopyCode = () => {
     navigator.clipboard.writeText(facilityCode);
@@ -24,107 +50,121 @@ const DashboardPage: React.FC = () => {
     setTimeout(() => setCodeCopied(false), 2000);
   };
 
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    const imageFiles = Array.from(files).filter(f => f.type.startsWith('image/'));
+    setSelectedFiles(prev => [...prev, ...imageFiles]);
+  };
+
+  const onClickUploadArea = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0 || !facilityId) return;
+    setIsUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('facility_id', facilityId);
+      for (const file of selectedFiles) {
+        formData.append('files', file);
+      }
+      await apiClient.uploadPhoto(facilityId, formData);
+      setSelectedFiles([]);
+      setShowUploadModal(false);
+      await fetchStats();
+    } catch (err) {
+      console.error('Upload failed:', err);
+      alert('Upload failed');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const openModal = () => {
+    setSelectedFiles([]);
+    setShowUploadModal(true);
+  };
+
   return (
     <Layout>
       <div className="space-y-8">
-        {/* Header */}
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">대시보드</h1>
             <div className="flex items-center gap-3 mt-1">
               <p className="text-gray-600">{facilityName}</p>
-              <span className="text-gray-300">|</span>
-              <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-md">
-                <span className="text-xs text-gray-500">시설코드:</span>
-                <code className="text-xs font-mono font-bold text-primary">{facilityCode}</code>
-                <button onClick={handleCopyCode} className="text-gray-400 hover:text-primary transition ml-0.5" title="코드 복사">
-                  {codeCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
-                </button>
-              </div>
+              {facilityCode && (
+                <React.Fragment>
+                  <span className="text-gray-300">|</span>
+                  <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-md">
+                    <span className="text-xs text-gray-500">시설코드:</span>
+                    <code className="text-xs font-mono font-bold text-blue-600">{facilityCode}</code>
+                    <button onClick={handleCopyCode} className="text-gray-400 hover:text-blue-600 transition ml-0.5" title="코드 복사">
+                      {codeCopied ? <Check size={14} className="text-green-500" /> : <Copy size={14} />}
+                    </button>
+                  </div>
+                </React.Fragment>
+              )}
             </div>
           </div>
           <button
-            onClick={() => setShowUploadModal(true)}
-            className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition shadow-soft"
+            onClick={openModal}
+            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md"
           >
             <Upload size={20} />
             사진 업로드
           </button>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <StatsCard
-            icon={Image}
-            label="오늘 업로드"
-            value={stats.photosToday}
-            subtext={`총 ${stats.totalPhotos}개 사진`}
-            color="blue"
-          />
-          <StatsCard
-            icon={Users}
-            label="총 입소자 수"
-            value={stats.totalResidents}
-            subtext="활성 상태"
-            color="green"
-          />
-          <StatsCard
-            icon={CheckCircle}
-            label="분류 완료"
-            value={stats.classifiedPhotos}
-            subtext={`${stats.classificationRate}% 완료율`}
-            color="purple"
-          />
-          <StatsCard
-            icon={TrendingUp}
-            label="분류율"
-            value={`${stats.classificationRate}%`}
-            subtext="AI 자동 분류"
-            color="orange"
-          />
-        </div>
+        {loading ? (
+          <div className="text-center py-12 text-gray-500">통계 로딩 중...</div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <StatsCard icon={Image} label="오늘 업로드" value={stats?.photosToday ?? 0} subtext={`총 ${stats?.totalPhotos ?? 0}개 사진`} color="blue" />
+            <StatsCard icon={Users} label="총 입소자 수" value={stats?.totalResidents ?? 0} subtext="활성 상태" color="green" />
+            <StatsCard icon={CheckCircle} label="분류 완료" value={stats?.classifiedPhotos ?? 0} subtext={`${stats?.classificationRate ?? 0}% 완료율`} color="purple" />
+            <StatsCard icon={TrendingUp} label="분류율" value={`${stats?.classificationRate ?? 0}%`} subtext="AI 자동 분류" color="orange" />
+          </div>
+        )}
 
-        {/* Recent Photos Section */}
-        <div className="bg-white rounded-lg shadow-soft p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold text-gray-900">최근 업로드된 사진</h2>
-            <button className="text-primary hover:underline text-sm font-medium">
-              모두 보기
+        {!loading && stats && stats.totalPhotos === 0 && (
+          <div className="bg-white rounded-lg shadow-md p-12 text-center">
+            <Upload className="mx-auto text-gray-300 mb-4" size={64} />
+            <h2 className="text-xl font-bold text-gray-900 mb-2">아직 업로드된 사진이 없습니다</h2>
+            <p className="text-gray-500 mb-6">사진 업로드 버튼을 눌러 첫 사진을 업로드해보세요!</p>
+            <button
+              onClick={openModal}
+              className="bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+            >
+              첫 사진 업로드하기
             </button>
           </div>
+        )}
 
-          <PhotoGrid
-            photos={recentPhotos}
-            showClassification={true}
-            groupByDate={false}
-          />
-        </div>
-
-        {/* Quick Stats */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white rounded-lg shadow-soft p-6 border-l-4 border-blue-500">
-            <h3 className="text-gray-600 text-sm font-medium mb-2">금주 업로드</h3>
-            <p className="text-3xl font-bold text-gray-900">42</p>
-            <p className="text-xs text-gray-500 mt-2">지난주 대비 8% 증가</p>
+          <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500">
+            <h3 className="text-gray-600 text-sm font-medium mb-2">총 사진</h3>
+            <p className="text-3xl font-bold text-gray-900">{stats?.totalPhotos ?? 0}</p>
           </div>
-          <div className="bg-white rounded-lg shadow-soft p-6 border-l-4 border-green-500">
-            <h3 className="text-gray-600 text-sm font-medium mb-2">미분류 사진</h3>
-            <p className="text-3xl font-bold text-gray-900">35</p>
-            <p className="text-xs text-gray-500 mt-2">AI 분류 진행 중</p>
-          </div>
-          <div className="bg-white rounded-lg shadow-soft p-6 border-l-4 border-orange-500">
+          <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500">
             <h3 className="text-gray-600 text-sm font-medium mb-2">활성 입소자</h3>
-            <p className="text-3xl font-bold text-gray-900">5</p>
-            <p className="text-xs text-gray-500 mt-2">1명 퇴실</p>
+            <p className="text-3xl font-bold text-gray-900">{stats?.totalResidents ?? 0}</p>
+          </div>
+          <div className="bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500">
+            <h3 className="text-gray-600 text-sm font-medium mb-2">분류 완료</h3>
+            <p className="text-3xl font-bold text-gray-900">{stats?.classifiedPhotos ?? 0}</p>
           </div>
         </div>
       </div>
 
-      {/* Upload Modal */}
       {showUploadModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowUploadModal(false)}
+          onClick={() => !isUploading && setShowUploadModal(false)}
         >
           <div
             className="bg-white rounded-lg max-w-2xl w-full p-8"
@@ -132,28 +172,87 @@ const DashboardPage: React.FC = () => {
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-6">사진 업로드</h2>
 
-            <div className="space-y-4 mb-6">
-              <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition cursor-pointer">
-                <Upload className="mx-auto text-gray-400 mb-2" size={48} />
-                <p className="font-semibold text-gray-900 mb-1">
-                  이미지를 드래그하거나 클릭하여 업로드
-                </p>
-                <p className="text-sm text-gray-500">JPG, PNG, GIF 등 모든 이미지 형식 지원</p>
-              </div>
+            <input
+              ref={fileInputRef}
+              type="file"
+              multiple
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => {
+                handleFileSelect(e.target.files);
+                if (e.target) e.target.value = '';
+              }}
+            />
+
+            <div
+              role="button"
+              tabIndex={0}
+              onClick={onClickUploadArea}
+              onDragOver={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(true); }}
+              onDragLeave={(e) => { e.preventDefault(); e.stopPropagation(); setDragOver(false); }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setDragOver(false);
+                handleFileSelect(e.dataTransfer.files);
+              }}
+              style={{ cursor: 'pointer' }}
+              className={`border-2 border-dashed rounded-lg p-8 text-center transition mb-4 ${
+                dragOver ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+              }`}
+            >
+              <Upload className="mx-auto text-gray-400 mb-2" size={48} />
+              <p className="font-semibold text-gray-900 mb-1">
+                여기를 클릭하거나 이미지를 드래그해서 업로드
+              </p>
+              <p className="text-sm text-gray-500">JPG, PNG 등 이미지 형식 지원 (다중 선택 가능)</p>
             </div>
+
+            {selectedFiles.length > 0 && (
+              <div className="mb-4">
+                <div className="flex justify-between items-center mb-2">
+                  <p className="text-sm font-semibold text-gray-700">선택된 파일 ({selectedFiles.length}개)</p>
+                  <button onClick={() => setSelectedFiles([])} className="text-xs text-red-500 hover:text-red-700">
+                    모두 제거
+                  </button>
+                </div>
+                <div className="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-40 overflow-y-auto">
+                  {selectedFiles.map((file, idx) => (
+                    <div key={idx} className="relative aspect-square bg-gray-100 rounded overflow-hidden group">
+                      <img src={URL.createObjectURL(file)} alt={file.name} className="w-full h-full object-cover" />
+                      <button
+                        onClick={() => setSelectedFiles(prev => prev.filter((_, i) => i !== idx))}
+                        className="absolute top-0.5 right-0.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition"
+                      >
+                        x
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             <div className="flex gap-3">
               <button
                 onClick={() => setShowUploadModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+                disabled={isUploading}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition disabled:opacity-50"
               >
                 취소
               </button>
               <button
-                onClick={() => setShowUploadModal(false)}
-                className="flex-1 px-4 py-2 bg-primary text-white rounded-lg font-medium hover:opacity-90 transition"
+                onClick={handleUpload}
+                disabled={isUploading || selectedFiles.length === 0}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
               >
-                업로드
+                {isUploading ? (
+                  <React.Fragment>
+                    <Loader2 className="animate-spin" size={18} />
+                    <span>업로드 중...</span>
+                  </React.Fragment>
+                ) : (
+                  <span>{selectedFiles.length > 0 ? selectedFiles.length + '개 ' : ''}업로드</span>
+                )}
               </button>
             </div>
           </div>

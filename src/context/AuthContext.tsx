@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { User, UserRole } from '../types';
+import { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
@@ -28,10 +28,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setIsLoading(false);
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (_email: string, _password: string) => {
     setIsLoading(true);
     try {
-      // This will be called by the login page
       // The actual API call happens in LoginPage
       setIsLoading(false);
     } catch (error) {

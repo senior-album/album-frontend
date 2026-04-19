@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Home, Users, Image, Menu, X } from 'lucide-react';
+import { LogOut, Home, Users, Image, Shield, Menu, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 
@@ -28,6 +28,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
     { path: '/dashboard', icon: Home, label: '대시보드' },
     { path: '/residents', icon: Users, label: '입소자 관리' },
     { path: '/photos', icon: Image, label: '사진 관리' },
+    { path: '/guardian-manage', icon: Shield, label: '보호자 관리' },
   ];
 
   if (isSidebarHidden) {
