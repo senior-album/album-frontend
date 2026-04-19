@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Edit2, Camera, Loader2, UserPlus, Phone, Eye, Trash2, CheckCircle, XCircle, Image } from 'lucide-react';
+import { Plus, Edit2, Camera, Loader2, UserPlus, Phone, Trash2, CheckCircle, XCircle, Image } from 'lucide-react';
 import Layout from '../components/Layout';
 import { apiClient } from '../utils/api';
 import { Resident } from '../types';
