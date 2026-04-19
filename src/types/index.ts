@@ -8,6 +8,7 @@ export interface User {
   is_admin?: boolean;
   facility_id?: string;
   phone?: string;
+  profile_image?: string;
   is_active?: boolean;
   created_at?: string;
 }

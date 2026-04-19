@@ -44,7 +44,7 @@ interface FacilityGroup {
 
 const GuardianMyPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
 
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfileData | null>(null);
@@ -118,7 +118,6 @@ const GuardianMyPage: React.FC = () => {
     navigate('/login');
   };
 
-  const approvedCount = guardianships.filter((g) => g.is_approved).length;
   const pendingCount = guardianships.filter((g) => !g.is_approved && !g.is_rejected).length;
   const totalResidents = facilityGroups.reduce((sum, fg) => sum + fg.residents.length, 0);
 
