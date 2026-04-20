@@ -20,9 +20,8 @@ const KakaoCallbackPage: React.FC = () => {
     const handleCallback = async () => {
       try {
         const response = await apiClient.kakaoCallback(code);
-        const { accessToken, isNewUser, user, facility } = response.data;
+        const { isNewUser, user, facility } = response.data;
 
-        localStorage.setItem('accessToken', accessToken);
         localStorage.setItem('user', JSON.stringify(user));
         if (facility) {
           localStorage.setItem('facility', JSON.stringify(facility));

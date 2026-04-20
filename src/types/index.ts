@@ -65,7 +65,6 @@ export interface Guardian {
 }
 
 export interface AuthResponse {
-  accessToken: string;
   user: User;
   facility?: Facility;
 }

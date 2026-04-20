@@ -31,9 +31,8 @@ const LoginPage: React.FC = () => {
 
     try {
       const response = await apiClient.login(email, password);
-      const { accessToken, user, facility } = response.data;
+      const { user, facility } = response.data;
 
-      localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('user', JSON.stringify(user));
       if (facility) {
         localStorage.setItem('facility', JSON.stringify(facility));

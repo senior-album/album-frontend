@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { User } from '../types';
+import { apiClient } from '../utils/api';
 
 interface AuthContextType {
   user: User | null;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
   setUser: (user: User) => void;
 }
 
@@ -39,10 +40,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await apiClient.getClient().post('/auth/logout');
+    } catch {
+      // 쿠키 삭제 실패해도 로컬 상태는 정리
+    }
     setUser(null);
     localStorage.removeItem('user');
-    localStorage.removeItem('accessToken');
+    localStorage.removeItem('facility');
   };
 
   return (

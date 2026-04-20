@@ -66,9 +66,8 @@ const SelectRolePage: React.FC = () => {
       }
 
       const response = await apiClient.setRoleAfterKakao(data);
-      const { accessToken, user: userData, facility } = response.data;
+      const { user: userData, facility } = response.data;
 
-      localStorage.setItem('accessToken', accessToken);
       localStorage.setItem('user', JSON.stringify(userData));
       if (facility) {
         localStorage.setItem('facility', JSON.stringify(facility));

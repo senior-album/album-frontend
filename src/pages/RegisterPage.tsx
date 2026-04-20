@@ -88,10 +88,9 @@ const RegisterPage: React.FC = () => {
         });
       }
 
-      const { accessToken, user: userData, facility } = response.data;
+      const { user: userData, facility } = response.data;
 
-      // 로컬 스토리지에 저장
-      localStorage.setItem('accessToken', accessToken);
+      // 사용자/시설 정보 캐시 (JWT는 httpOnly 쿠키로 관리)
       localStorage.setItem('user', JSON.stringify(userData));
       if (facility) {
         localStorage.setItem('facility', JSON.stringify(facility));

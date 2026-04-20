@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, InternalAxiosRequestConfig, AxiosError } from 'axios';
+import axios, { AxiosInstance, AxiosError } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -11,19 +11,8 @@ class ApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      withCredentials: true,  // httpOnly 쿠키 자동 전송
     });
-
-    // Request interceptor — JWT 토큰 자동 첨부
-    this.instance.interceptors.request.use(
-      (config: InternalAxiosRequestConfig) => {
-        const token = localStorage.getItem('accessToken');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-      },
-      (error: AxiosError) => Promise.reject(error)
-    );
 
     // Response interceptor — 401 시 토큰 갱신 시도 후 실패하면 로그아웃
     this.instance.interceptors.response.use(
@@ -38,14 +27,11 @@ class ApiClient {
         ) {
           originalRequest._retry = true;
           try {
-            const refreshRes = await this.instance.post('/auth/refresh');
-            const newToken = refreshRes.data.accessToken;
-            localStorage.setItem('accessToken', newToken);
-            originalRequest.headers.Authorization = `Bearer ${newToken}`;
+            await this.instance.post('/auth/refresh');
+            // 쿠키가 자동으로 갱신되므로 그대로 재요청
             return this.instance(originalRequest);
           } catch {
             // 갱신도 실패 → 로그아웃
-            localStorage.removeItem('accessToken');
             localStorage.removeItem('user');
             localStorage.removeItem('facility');
             window.location.href = '/login';
