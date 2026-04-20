@@ -3,10 +3,16 @@ import { Shield, CheckCircle, XCircle, Clock, Loader2, UserCheck } from 'lucide-
 import Layout from '../components/Layout';
 import { apiClient } from '../utils/api';
 
+interface ResidentItem {
+  id: string;
+  name: string;
+  room_number: string | null;
+}
+
 interface GuardianRequest {
   id: string;
   user_id: string;
-  resident_id: string;
+  resident_id: string | null;
   relationship_type: string | null;
   request_message: string | null;
   is_approved: boolean;
@@ -28,6 +34,9 @@ const GuardianManagePage: React.FC = () => {
   const [rejectModal, setRejectModal] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [processing, setProcessing] = useState<string | null>(null);
+  const [residents, setResidents] = useState<ResidentItem[]>([]);
+  const [assignModal, setAssignModal] = useState<string | null>(null); // guardian_id for resident assignment
+  const [assignResidentId, setAssignResidentId] = useState('');
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const facility = JSON.parse(localStorage.getItem('facility') || '{}');
@@ -36,12 +45,14 @@ const GuardianManagePage: React.FC = () => {
   const fetchData = useCallback(async () => {
     if (!facilityId) return;
     try {
-      const [pendingRes, allRes] = await Promise.all([
+      const [pendingRes, allRes, residentsRes] = await Promise.all([
         apiClient.getPendingGuardians(facilityId),
         apiClient.getAllGuardians(facilityId),
+        apiClient.getFacilityResidents(facilityId),
       ]);
       setPendingGuardians(pendingRes.data);
       setAllGuardians(allRes.data);
+      setResidents(residentsRes.data || []);
     } catch (err) {
       console.error('Failed to fetch guardians:', err);
     } finally {
@@ -53,14 +64,23 @@ const GuardianManagePage: React.FC = () => {
     fetchData();
   }, [fetchData]);
 
-  const handleApprove = async (guardianId: string) => {
+  const handleApprove = async (guardianId: string, residentId?: string) => {
+    // 시설코드 요청 (resident 미배정)이면 입소자 선택 모달 띄우기
+    const guardian = pendingGuardians.find(g => g.id === guardianId);
+    if (guardian && !guardian.resident_id && !residentId) {
+      setAssignModal(guardianId);
+      setAssignResidentId('');
+      return;
+    }
+
     setProcessing(guardianId);
     try {
-      await apiClient.approveGuardian(guardianId, true);
+      await apiClient.approveGuardian(guardianId, true, undefined, residentId);
+      setAssignModal(null);
       await fetchData();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Approval failed:', err);
-      alert('승인에 실패했습니다.');
+      alert(err.response?.data?.detail || '승인에 실패했습니다.');
     } finally {
       setProcessing(null);
     }
@@ -272,6 +292,54 @@ const GuardianManagePage: React.FC = () => {
                 className="flex-1 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition disabled:opacity-50"
               >
                 거부하기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 입소자 배정 모달 (시설코드 요청 승인 시) */}
+      {assignModal && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={() => { setAssignModal(null); setAssignResidentId(''); }}
+        >
+          <div className="bg-white rounded-lg max-w-md w-full p-8" onClick={e => e.stopPropagation()}>
+            <h2 className="text-xl font-bold text-gray-900 mb-2">입소자 배정</h2>
+            <p className="text-sm text-gray-500 mb-4">
+              시설코드로 요청한 보호자입니다. 연결할 입소자를 선택해주세요.
+            </p>
+            <div className="mb-4">
+              <label className="block text-sm font-semibold text-gray-900 mb-2">입소자 선택 *</label>
+              <select
+                value={assignResidentId}
+                onChange={e => setAssignResidentId(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+              >
+                <option value="">선택해주세요</option>
+                {residents.map((r: any) => (
+                  <option key={r.id} value={r.id}>
+                    {r.name} {r.room_number ? `(${r.room_number})` : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setAssignModal(null); setAssignResidentId(''); }}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => {
+                  if (!assignResidentId) { alert('입소자를 선택해주세요.'); return; }
+                  handleApprove(assignModal, assignResidentId);
+                }}
+                disabled={processing === assignModal || !assignResidentId}
+                className="flex-1 px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition disabled:opacity-50"
+              >
+                승인 + 배정
               </button>
             </div>
           </div>

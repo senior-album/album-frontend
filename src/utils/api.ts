@@ -221,11 +221,20 @@ class ApiClient {
 
   public createInvitation(data: {
     resident_id: string;
-    phone: string;
+    phone?: string;
+    email?: string;
     relationship_type?: string;
     message?: string;
   }) {
     return this.instance.post('/invitations', data);
+  }
+
+  public requestFacilityConnection(data: {
+    facility_code: string;
+    relationship_type?: string;
+    message?: string;
+  }) {
+    return this.instance.post('/guardians/me/connect', data);
   }
 
   public getFacilityInvitations(facilityId: string) {
@@ -262,10 +271,11 @@ class ApiClient {
     return this.instance.get(`/guardians/facility/${facilityId}/all`);
   }
 
-  public approveGuardian(guardianId: string, approved: boolean, rejectReason?: string) {
+  public approveGuardian(guardianId: string, approved: boolean, rejectReason?: string, residentId?: string) {
     return this.instance.post(`/guardians/${guardianId}/approve`, {
       approved,
       reject_reason: rejectReason,
+      resident_id: residentId,
     });
   }
 }

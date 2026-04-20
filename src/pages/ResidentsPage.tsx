@@ -32,7 +32,9 @@ const ResidentsPage: React.FC = () => {
   const [deletingFaceId, setDeletingFaceId] = useState<string | null>(null);
 
   // 보호자 초대 폼
+  const [inviteContactType, setInviteContactType] = useState<'phone' | 'email'>('phone');
   const [invitePhone, setInvitePhone] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRelationship, setInviteRelationship] = useState('');
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteSending, setInviteSending] = useState(false);
@@ -648,17 +650,21 @@ const ResidentsPage: React.FC = () => {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                if (!invitePhone.trim()) { alert('전화번호를 입력해주세요.'); return; }
+                const contactVal = inviteContactType === 'phone' ? invitePhone.trim() : inviteEmail.trim();
+                if (!contactVal) { alert(inviteContactType === 'phone' ? '전화번호를 입력해주세요.' : '이메일을 입력해주세요.'); return; }
                 setInviteSending(true);
                 try {
                   await apiClient.createInvitation({
                     resident_id: selectedResident.id,
-                    phone: invitePhone.trim(),
+                    phone: inviteContactType === 'phone' ? invitePhone.trim() : undefined,
+                    email: inviteContactType === 'email' ? inviteEmail.trim() : undefined,
                     relationship_type: inviteRelationship || undefined,
                     message: inviteMessage || undefined,
                   });
-                  alert(`${invitePhone}로 초대를 보냈습니다.\n보호자가 가입 후 초대를 수락하면 사진을 열람할 수 있습니다.`);
+                  alert(`${contactVal}로 초대를 보냈습니다.\n보호자가 가입 후 초대를 수락하면 사진을 열람할 수 있습니다.`);
                   setShowInviteModal(false);
+                  setInvitePhone('');
+                  setInviteEmail('');
                 } catch (err: any) {
                   alert(err.response?.data?.detail || '초대에 실패했습니다.');
                 } finally {
@@ -667,22 +673,54 @@ const ResidentsPage: React.FC = () => {
               }}
               className="space-y-4"
             >
+              {/* 초대 방식 선택 */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-900 mb-2">초대 방식</label>
+                <div className="flex gap-2">
+                  <button type="button"
+                    onClick={() => setInviteContactType('phone')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${inviteContactType === 'phone' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                    전화번호
+                  </button>
+                  <button type="button"
+                    onClick={() => setInviteContactType('email')}
+                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${inviteContactType === 'email' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                    이메일
+                  </button>
+                </div>
+              </div>
+
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  보호자 전화번호 *
+                  {inviteContactType === 'phone' ? '보호자 전화번호 *' : '보호자 이메일 *'}
                 </label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                  <input
-                    type="tel"
-                    value={invitePhone}
-                    onChange={(e) => setInvitePhone(e.target.value)}
-                    placeholder="010-1234-5678"
-                    className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                    required
-                  />
+                  {inviteContactType === 'phone' ? (
+                    <input
+                      type="tel"
+                      value={invitePhone}
+                      onChange={(e) => setInvitePhone(e.target.value)}
+                      placeholder="010-1234-5678"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  ) : (
+                    <input
+                      type="email"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      placeholder="guardian@example.com"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                      required
+                    />
+                  )}
                 </div>
-                <p className="text-xs text-gray-400 mt-1">보호자가 가입 시 사용할 전화번호를 입력하세요</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {inviteContactType === 'phone'
+                    ? '보호자가 가입 시 사용할 전화번호를 입력하세요'
+                    : '보호자가 가입 시 사용할 이메일을 입력하세요'}
+                </p>
               </div>
 
               <div>
