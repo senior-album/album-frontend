@@ -122,7 +122,7 @@ class ApiClient {
   // ==================== Residents ====================
 
   public createResident(data: { facility_id: string; name: string; [key: string]: any }) {
-    return this.instance.post('/residents/', data);
+    return this.instance.post('/residents', data);
   }
 
   public registerResidentFace(residentId: string, photoData: FormData) {
