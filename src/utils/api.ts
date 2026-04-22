@@ -18,6 +18,26 @@ class ApiClient {
     this.instance.interceptors.response.use(
       (response) => response,
       async (error: AxiosError) => {
+        // FastAPI 422 는 detail 이 [{type, loc, msg, input}, ...] 배열 — 그대로 렌더하면 React #31 로 화면이 죽음.
+        // 여기서 읽기 쉬운 문자열로 평탄화해 downstream 코드가 detail 을 문자열로 가정해도 안전하게.
+        const data: any = error.response?.data;
+        if (data && typeof data === 'object') {
+          if (Array.isArray(data.detail)) {
+            data.detail = data.detail
+              .map((d: any) => {
+                if (typeof d === 'string') return d;
+                if (d && typeof d === 'object') {
+                  const loc = Array.isArray(d.loc) ? d.loc.filter((s: any) => s !== 'body').join('.') : '';
+                  return loc ? `${loc}: ${d.msg ?? ''}`.trim() : (d.msg ?? JSON.stringify(d));
+                }
+                return String(d);
+              })
+              .join('; ');
+          } else if (data.detail && typeof data.detail === 'object') {
+            data.detail = data.detail.msg ?? JSON.stringify(data.detail);
+          }
+        }
+
         const originalRequest = error.config as any;
         if (
           error.response?.status === 401 &&
@@ -261,8 +281,8 @@ class ApiClient {
     return this.instance.get('/auth/kakao/login-url');
   }
 
-  public kakaoCallback(code: string) {
-    return this.instance.post('/auth/kakao/callback', null, { params: { code } });
+  public kakaoCallback(code: string, state: string) {
+    return this.instance.post('/auth/kakao/callback', null, { params: { code, state } });
   }
 
   public setRoleAfterKakao(data: {

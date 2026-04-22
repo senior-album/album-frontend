@@ -12,14 +12,20 @@ const KakaoCallbackPage: React.FC = () => {
 
   useEffect(() => {
     const code = searchParams.get('code');
+    const state = searchParams.get('state');
     if (!code) {
       setError('인증 코드가 없습니다.');
+      return;
+    }
+    if (!state) {
+      setError('인증 state 가 없습니다. 로그인을 다시 시도해주세요.');
+      setTimeout(() => navigate('/login'), 3000);
       return;
     }
 
     const handleCallback = async () => {
       try {
-        const response = await apiClient.kakaoCallback(code);
+        const response = await apiClient.kakaoCallback(code, state);
         const { isNewUser, user, facility } = response.data;
 
         localStorage.setItem('user', JSON.stringify(user));
