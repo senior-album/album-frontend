@@ -14,6 +14,8 @@ import KakaoCallbackPage from './pages/KakaoCallbackPage';
 import SelectRolePage from './pages/SelectRolePage';
 import SharedPhotoPage from './pages/SharedPhotoPage';
 import GuardianMyPage from './pages/GuardianMyPage';
+import PrivacyPage from './pages/PrivacyPage';
+import TermsPage from './pages/TermsPage';
 
 const App: React.FC = () => {
   return (
@@ -26,6 +28,8 @@ const App: React.FC = () => {
           <Route path="/auth/kakao/callback" element={<KakaoCallbackPage />} />
           <Route path="/select-role" element={<SelectRolePage />} />
           <Route path="/shared/:shareToken" element={<SharedPhotoPage />} />
+          <Route path="/privacy" element={<PrivacyPage />} />
+          <Route path="/terms" element={<TermsPage />} />
 
           {/* Staff Routes */}
           <Route

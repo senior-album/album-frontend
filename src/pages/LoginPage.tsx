@@ -152,7 +152,12 @@ const LoginPage: React.FC = () => {
         </div>
 
         {/* Info Footer */}
-        <div className="mt-8 text-center text-blue-100 text-sm">
+        <div className="mt-8 text-center text-blue-100 text-sm space-y-2">
+          <div className="flex justify-center gap-4">
+            <Link to="/terms" className="hover:underline">이용약관</Link>
+            <span aria-hidden="true">·</span>
+            <Link to="/privacy" className="hover:underline font-semibold">개인정보처리방침</Link>
+          </div>
           <p>© 2024 Senior Album. All rights reserved.</p>
         </div>
       </div>
