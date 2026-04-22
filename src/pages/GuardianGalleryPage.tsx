@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/api';
 import OtpVerificationModal from '../components/OtpVerificationModal';
+import FacilityPicker, { FacilitySearchResult } from '../components/FacilityPicker';
 
 interface InvitationItem {
   id: string;
@@ -74,9 +75,9 @@ const GuardianGalleryPage: React.FC = () => {
   const [contactValue, setContactValue] = useState('');
   const [savingContact, setSavingContact] = useState(false);
 
-  // 시설코드 연결 요청
+  // 시설 검색·선택 기반 연결 요청
   const [showConnectForm, setShowConnectForm] = useState(false);
-  const [facilityCode, setFacilityCode] = useState('');
+  const [connectFacility, setConnectFacility] = useState<FacilitySearchResult | null>(null);
   const [connectRelationType, setConnectRelationType] = useState('');
   const [connectMessage, setConnectMessage] = useState('');
   const [connectingFacility, setConnectingFacility] = useState(false);
@@ -170,16 +171,17 @@ const GuardianGalleryPage: React.FC = () => {
   };
 
   const submitConnectRequest = async () => {
+    if (!connectFacility) return;
     setConnectingFacility(true);
     try {
       const res = await apiClient.requestFacilityConnection({
-        facility_code: facilityCode.trim(),
+        facility_code: connectFacility.code,
         relationship_type: connectRelationType || undefined,
         message: connectMessage || undefined,
       });
       alert(res.data.message);
       setShowConnectForm(false);
-      setFacilityCode('');
+      setConnectFacility(null);
       setConnectRelationType('');
       setConnectMessage('');
       await fetchData();
@@ -197,7 +199,7 @@ const GuardianGalleryPage: React.FC = () => {
   };
 
   const handleConnectFacility = async () => {
-    if (!facilityCode.trim()) return;
+    if (!connectFacility) return;
     // 요청 전에 OTP 인증 모달 먼저 — 서버도 이중 체크하지만 UX 상 선행 검증
     setShowOtpModal(true);
   };
@@ -395,12 +397,12 @@ const GuardianGalleryPage: React.FC = () => {
                 </div>
                 <h2 className="text-lg font-bold text-gray-900 mb-2">연동된 시설이 없습니다</h2>
                 <p className="text-gray-500 text-sm mb-6">
-                  시설 코드를 입력하여 연결을 요청하거나, 시설에서 초대를 보내면 자동으로 연결됩니다.
+                  아래에서 시설을 검색해 연결을 요청하거나, 시설에서 초대를 보내면 자동으로 연결됩니다.
                 </p>
               </div>
             )}
 
-            {/* 시설 코드로 연결 요청 */}
+            {/* 시설 검색·선택으로 연결 요청 */}
             {!showConnectForm ? (
               <div className="mb-6">
                 <button
@@ -408,25 +410,20 @@ const GuardianGalleryPage: React.FC = () => {
                   className="w-full py-3 border-2 border-dashed border-primary border-opacity-40 rounded-xl text-primary font-medium hover:bg-blue-50 transition flex items-center justify-center gap-2"
                 >
                   <Search size={18} />
-                  시설 코드로 연결 요청하기
+                  시설 검색해서 연결 요청하기
                 </button>
               </div>
             ) : (
               <div className="bg-white rounded-2xl shadow-soft p-6 mb-6">
                 <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">
                   <Building2 size={20} className="text-primary" />
-                  시설 코드로 연결 요청
+                  시설 검색 · 연결 요청
                 </h3>
                 <div className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">시설 코드 *</label>
-                    <input
-                      type="text"
-                      placeholder="FAC-XXXXXX"
-                      value={facilityCode}
-                      onChange={(e) => setFacilityCode(e.target.value.toUpperCase())}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
+                    <label className="block text-sm font-medium text-gray-700 mb-1">시설 검색 *</label>
+                    <FacilityPicker value={connectFacility} onChange={setConnectFacility} />
+                    <p className="text-xs text-gray-400 mt-1">시설 이름 · 주소 · 전화번호로 검색해 선택하세요</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">관계</label>
@@ -458,14 +455,14 @@ const GuardianGalleryPage: React.FC = () => {
                   <div className="flex gap-2 pt-2">
                     <button
                       onClick={handleConnectFacility}
-                      disabled={connectingFacility || !facilityCode.trim()}
+                      disabled={connectingFacility || !connectFacility}
                       className="flex-1 py-2.5 bg-primary text-white rounded-lg font-medium hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
                     >
                       {connectingFacility ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />}
                       연결 요청
                     </button>
                     <button
-                      onClick={() => setShowConnectForm(false)}
+                      onClick={() => { setShowConnectForm(false); setConnectFacility(null); }}
                       className="px-4 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition"
                     >
                       취소
