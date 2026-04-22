@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Heart, Share2, ChevronLeft, Loader2, CheckCircle, XCircle, Mail, Building2, Users, User as UserIcon, Phone, AtSign, Search } from 'lucide-react';
+import { Heart, Share2, Loader2, CheckCircle, Mail, Building2, Users, Phone, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/api';
@@ -51,7 +51,7 @@ interface GuardianshipItem {
 
 const GuardianGalleryPage: React.FC = () => {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [facilityGroups, setFacilityGroups] = useState<FacilityGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -69,7 +69,7 @@ const GuardianGalleryPage: React.FC = () => {
 
   // 연락처 입력
   const [showContactBanner, setShowContactBanner] = useState(false);
-  const [contactType, setContactType] = useState<'phone' | 'email'>('phone');
+  const [contactType] = useState<'phone' | 'email'>('phone');
   const [contactValue, setContactValue] = useState('');
   const [savingContact, setSavingContact] = useState(false);
 
@@ -187,11 +187,6 @@ const GuardianGalleryPage: React.FC = () => {
     } finally {
       setConnectingFacility(false);
     }
-  };
-
-  const handleLogout = async () => {
-    await logout();
-    navigate('/login');
   };
 
   const toggleFavorite = (photoId: string) => {
