@@ -3,6 +3,7 @@ import { Heart, Share2, Loader2, CheckCircle, Mail, Building2, Users, Phone, Sea
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/api';
+import OtpVerificationModal from '../components/OtpVerificationModal';
 
 interface InvitationItem {
   id: string;
@@ -79,6 +80,7 @@ const GuardianGalleryPage: React.FC = () => {
   const [connectRelationType, setConnectRelationType] = useState('');
   const [connectMessage, setConnectMessage] = useState('');
   const [connectingFacility, setConnectingFacility] = useState(false);
+  const [showOtpModal, setShowOtpModal] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -167,8 +169,7 @@ const GuardianGalleryPage: React.FC = () => {
     }
   };
 
-  const handleConnectFacility = async () => {
-    if (!facilityCode.trim()) return;
+  const submitConnectRequest = async () => {
     setConnectingFacility(true);
     try {
       const res = await apiClient.requestFacilityConnection({
@@ -183,10 +184,22 @@ const GuardianGalleryPage: React.FC = () => {
       setConnectMessage('');
       await fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.detail || '연결 요청에 실패했습니다.');
+      const detail = err.response?.data?.detail || '연결 요청에 실패했습니다.';
+      // 서버가 OTP 인증 만료/누락 을 감지하면 모달로 재인증 유도
+      if (typeof detail === 'string' && detail.includes('휴대폰 인증')) {
+        setShowOtpModal(true);
+      } else {
+        alert(detail);
+      }
     } finally {
       setConnectingFacility(false);
     }
+  };
+
+  const handleConnectFacility = async () => {
+    if (!facilityCode.trim()) return;
+    // 요청 전에 OTP 인증 모달 먼저 — 서버도 이중 체크하지만 UX 상 선행 검증
+    setShowOtpModal(true);
   };
 
   const toggleFavorite = (photoId: string) => {
@@ -640,6 +653,17 @@ const GuardianGalleryPage: React.FC = () => {
           <p className="text-sm opacity-80">&copy; 2024 Senior Album. 소중한 순간을 함께 나눕니다.</p>
         </div>
       </footer>
+
+      <OtpVerificationModal
+        isOpen={showOtpModal}
+        defaultPhone={user?.phone || ''}
+        purpose="시설 연결 요청 전에 휴대폰 인증이 필요합니다."
+        onVerified={async () => {
+          setShowOtpModal(false);
+          await submitConnectRequest();
+        }}
+        onClose={() => setShowOtpModal(false)}
+      />
     </div>
   );
 };
