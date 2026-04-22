@@ -87,6 +87,16 @@ class ApiClient {
     return this.instance.get('/auth/me');
   }
 
+  // ==================== Phone OTP ====================
+
+  public sendPhoneOtp(phone: string) {
+    return this.instance.post('/auth/phone/otp/send', { phone });
+  }
+
+  public verifyPhoneOtp(phone: string, code: string) {
+    return this.instance.post('/auth/phone/otp/verify', { phone, code });
+  }
+
   // ==================== Facilities ====================
 
   public getFacility(id: string) {
