@@ -267,8 +267,8 @@ class ApiClient {
     return this.instance.get('/auth/kakao/login-url');
   }
 
-  public kakaoCallback(code: string) {
-    return this.instance.post('/auth/kakao/callback', null, { params: { code } });
+  public kakaoCallback(code: string, state: string) {
+    return this.instance.post('/auth/kakao/callback', null, { params: { code, state } });
   }
 
   public setRoleAfterKakao(data: {
