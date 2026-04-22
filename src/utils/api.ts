@@ -93,6 +93,10 @@ class ApiClient {
     return this.instance.get(`/facilities/${id}`);
   }
 
+  public searchFacilities(q: string, limit = 20) {
+    return this.instance.get('/facilities/search', { params: { q, limit } });
+  }
+
   public getFacilityStats(facilityId: string) {
     return this.instance.get(`/facilities/${facilityId}/stats`);
   }
