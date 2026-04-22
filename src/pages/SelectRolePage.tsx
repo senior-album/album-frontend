@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/api';
 import { Building2, MapPin, Loader2, ArrowLeft } from 'lucide-react';
+import FacilityPicker, { FacilitySearchResult } from '../components/FacilityPicker';
 
 type Role = 'admin' | 'staff' | 'guardian';
 
@@ -17,8 +18,8 @@ const SelectRolePage: React.FC = () => {
   const [facilityAddress, setFacilityAddress] = useState('');
   const [facilityPhone, setFacilityPhone] = useState('');
 
-  // 시설 직원
-  const [facilityCode, setFacilityCode] = useState('');
+  // 시설 직원 — 검색으로 선택한 시설
+  const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
 
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -57,12 +58,12 @@ const SelectRolePage: React.FC = () => {
         data.facility_address = facilityAddress;
         data.facility_phone = facilityPhone || undefined;
       } else if (r === 'staff') {
-        if (!facilityCode.trim()) {
-          setError('시설 코드를 입력해주세요.');
+        if (!selectedFacility) {
+          setError('시설을 검색해 선택해주세요.');
           setIsLoading(false);
           return;
         }
-        data.facility_code = facilityCode;
+        data.facility_code = selectedFacility.code;
       }
 
       const response = await apiClient.setRoleAfterKakao(data);
@@ -195,12 +196,9 @@ const SelectRolePage: React.FC = () => {
 
             {role === 'staff' && (
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-1">시설 코드</label>
-                <input
-                  type="text" value={facilityCode} onChange={(e) => setFacilityCode(e.target.value)}
-                  placeholder="시설 관리자에게 받은 코드 (예: FAC-A1B2C3)"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                />
+                <label className="block text-sm font-semibold text-gray-900 mb-1">소속 시설</label>
+                <FacilityPicker value={selectedFacility} onChange={setSelectedFacility} />
+                <p className="text-xs text-gray-400 mt-1">시설 이름 · 주소 · 전화번호로 검색해 선택하세요</p>
               </div>
             )}
 

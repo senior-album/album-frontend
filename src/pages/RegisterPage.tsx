@@ -3,6 +3,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/api';
 import { Mail, Lock, User, Phone, ArrowLeft, Building2, MapPin } from 'lucide-react';
+import FacilityPicker, { FacilitySearchResult } from '../components/FacilityPicker';
 
 type Role = 'admin' | 'staff' | 'guardian';
 
@@ -24,8 +25,8 @@ const RegisterPage: React.FC = () => {
   const [facilityAddress, setFacilityAddress] = useState('');
   const [facilityPhone, setFacilityPhone] = useState('');
 
-  // 시설 직원 전용
-  const [facilityCode, setFacilityCode] = useState('');
+  // 시설 직원 전용 — 검색으로 선택한 시설
+  const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
 
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -42,7 +43,7 @@ const RegisterPage: React.FC = () => {
       if (!facilityName.trim()) return '시설 이름을 입력해주세요.';
       if (!facilityAddress.trim()) return '시설 주소를 입력해주세요.';
     }
-    if (role === 'staff' && !facilityCode.trim()) return '시설 코드를 입력해주세요.';
+    if (role === 'staff' && !selectedFacility) return '시설을 검색해 선택해주세요.';
     return null;
   };
 
@@ -77,7 +78,7 @@ const RegisterPage: React.FC = () => {
           password,
           name,
           phone: phone || undefined,
-          facilityCode,
+          facilityCode: selectedFacility!.code,
         });
       } else {
         response = await apiClient.registerGuardian({
@@ -253,14 +254,12 @@ const RegisterPage: React.FC = () => {
               </div>
             </div>
 
-            {/* 시설 직원: 시설 코드 */}
+            {/* 시설 직원: 시설 검색 */}
             {role === 'staff' && (
               <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-1">시설 코드</label>
-                <input type="text" value={facilityCode} onChange={(e) => setFacilityCode(e.target.value)}
-                  placeholder="시설 관리자에게 받은 코드 (예: FAC-A1B2C3)"
-                  className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent text-sm" />
-                <p className="text-xs text-gray-400 mt-1">시설 관리자가 가입 시 발급받은 코드입니다</p>
+                <label className="block text-sm font-semibold text-gray-900 mb-1">소속 시설</label>
+                <FacilityPicker value={selectedFacility} onChange={setSelectedFacility} />
+                <p className="text-xs text-gray-400 mt-1">시설 이름 · 주소 · 전화번호로 검색해 선택하세요</p>
               </div>
             )}
 
