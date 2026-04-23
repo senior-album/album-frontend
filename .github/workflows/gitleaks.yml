@@ -12,6 +12,8 @@ permissions:
 jobs:
   scan:
     runs-on: ubuntu-latest
+    # 도입 초기 soft-fail — allowlist 정리 후 이 줄 제거.
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
         with:
