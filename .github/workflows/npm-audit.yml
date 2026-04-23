@@ -14,13 +14,13 @@ permissions:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    # 도입 초기 soft-fail — findings 는 로그에서 확인, 점진 수정 후 strict 전환.
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
+      # 도입 초기 soft-fail — findings 는 로그에서 확인. 의존성 bump 후 제거.
       - name: Run npm audit
+        continue-on-error: true
         run: npm audit --audit-level=high
