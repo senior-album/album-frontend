@@ -1,0 +1,26 @@
+name: npm-audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 1 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+      # 도입 초기 soft-fail — findings 는 로그에서 확인. 의존성 bump 후 제거.
+      - name: Run npm audit
+        continue-on-error: true
+        run: npm audit --audit-level=high
