@@ -13,7 +13,7 @@ jobs:
   scan:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0
       # 도입 초기 soft-fail — allowlist 정리 후 step 의 continue-on-error 제거로 strict 전환.
