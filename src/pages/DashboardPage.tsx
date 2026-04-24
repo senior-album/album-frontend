@@ -1,5 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { TrendingUp, Users, Image, CheckCircle, Upload, Copy, Check, Loader2 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import {
+  TrendingUp,
+  Users,
+  Image as ImageIcon,
+  CheckCircle,
+  Upload,
+  Copy,
+  Check,
+  Loader2,
+  UserPlus,
+  UserX,
+  ImageOff,
+  AlertTriangle,
+  ChevronRight,
+} from 'lucide-react';
 import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
 import { apiClient } from '../utils/api';
@@ -12,9 +27,22 @@ interface DashboardStats {
   classificationRate: number;
   facilityName: string;
   facilityCode: string;
+  // T-031: 시설장 조치 항목
+  invitations?: { pending: number; accepted: number; rejected: number };
+  residentsWithoutGuardian?: { count: number; topNames: string[] };
+  photosUnprocessed?: number;
+  residentsWithoutFace?: { count: number; topNames: string[] };
 }
 
+const formatPreview = (names: string[] | undefined, total: number | undefined): string => {
+  if (!names || names.length === 0) return '';
+  const joined = names.join(', ');
+  const remaining = Math.max(0, (total ?? names.length) - names.length);
+  return remaining > 0 ? `${joined} 외 ${remaining}명` : joined;
+};
+
 const DashboardPage: React.FC = () => {
+  const navigate = useNavigate();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -124,7 +152,7 @@ const DashboardPage: React.FC = () => {
           <div className="text-center py-12 text-gray-500">통계 로딩 중...</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatsCard icon={Image} label="오늘 업로드" value={stats?.photosToday ?? 0} subtext={`총 ${stats?.totalPhotos ?? 0}개 사진`} color="blue" />
+            <StatsCard icon={ImageIcon} label="오늘 업로드" value={stats?.photosToday ?? 0} subtext={`총 ${stats?.totalPhotos ?? 0}개 사진`} color="blue" />
             <StatsCard icon={Users} label="총 입소자 수" value={stats?.totalResidents ?? 0} subtext="활성 상태" color="green" />
             <StatsCard icon={CheckCircle} label="분류 완료" value={stats?.classifiedPhotos ?? 0} subtext={`${stats?.classificationRate ?? 0}% 완료율`} color="purple" />
             <StatsCard icon={TrendingUp} label="분류율" value={`${stats?.classificationRate ?? 0}%`} subtext="AI 자동 분류" color="orange" />
@@ -159,6 +187,112 @@ const DashboardPage: React.FC = () => {
             <p className="text-3xl font-bold text-gray-900">{stats?.classifiedPhotos ?? 0}</p>
           </div>
         </div>
+
+        {/* T-031: 조치 필요 섹션 */}
+        {!loading && stats && (
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-4">조치 필요</h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* 1) 보호자 초대 현황 */}
+              <button
+                type="button"
+                onClick={() => navigate('/guardians')}
+                className="text-left bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500 hover:shadow-lg transition group"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
+                    <UserPlus size={20} />
+                  </div>
+                  <ChevronRight size={18} className="text-gray-300 group-hover:text-gray-500 transition" />
+                </div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">보호자 초대 현황</h3>
+                <div className="flex items-end gap-3 text-sm">
+                  <div>
+                    <div className="text-2xl font-bold text-yellow-600">{stats.invitations?.pending ?? 0}</div>
+                    <div className="text-xs text-gray-500">대기</div>
+                  </div>
+                  <div className="text-gray-300">·</div>
+                  <div>
+                    <div className="text-2xl font-bold text-green-600">{stats.invitations?.accepted ?? 0}</div>
+                    <div className="text-xs text-gray-500">수락</div>
+                  </div>
+                  <div className="text-gray-300">·</div>
+                  <div>
+                    <div className="text-2xl font-bold text-gray-400">{stats.invitations?.rejected ?? 0}</div>
+                    <div className="text-xs text-gray-500">거부</div>
+                  </div>
+                </div>
+              </button>
+
+              {/* 2) 미연결 어르신 */}
+              <button
+                type="button"
+                onClick={() => navigate('/residents?filter=no-guardian')}
+                className="text-left bg-white rounded-lg shadow-md p-6 border-l-4 border-orange-500 hover:shadow-lg transition group"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="p-2 rounded-lg bg-orange-100 text-orange-600">
+                    <UserX size={20} />
+                  </div>
+                  <ChevronRight size={18} className="text-gray-300 group-hover:text-gray-500 transition" />
+                </div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">미연결 어르신</h3>
+                <p className="text-3xl font-bold text-gray-900 mb-1">{stats.residentsWithoutGuardian?.count ?? 0}명</p>
+                <p className="text-xs text-gray-500 truncate" title={formatPreview(stats.residentsWithoutGuardian?.topNames, stats.residentsWithoutGuardian?.count)}>
+                  {(stats.residentsWithoutGuardian?.count ?? 0) === 0
+                    ? '모두 보호자 연결됨'
+                    : formatPreview(stats.residentsWithoutGuardian?.topNames, stats.residentsWithoutGuardian?.count)}
+                </p>
+              </button>
+
+              {/* 3) 미처리 사진 */}
+              <button
+                type="button"
+                onClick={() => navigate('/photos?filter=unprocessed')}
+                className="text-left bg-white rounded-lg shadow-md p-6 border-l-4 border-purple-500 hover:shadow-lg transition group"
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className="p-2 rounded-lg bg-purple-100 text-purple-600">
+                    <ImageOff size={20} />
+                  </div>
+                  <ChevronRight size={18} className="text-gray-300 group-hover:text-gray-500 transition" />
+                </div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">미처리 사진</h3>
+                <p className="text-3xl font-bold text-gray-900 mb-1">{stats.photosUnprocessed ?? 0}장</p>
+                <p className="text-xs text-gray-500">
+                  {(stats.photosUnprocessed ?? 0) === 0 ? '모두 처리됨' : '수동 태그 또는 기준 얼굴 재등록 필요'}
+                </p>
+              </button>
+
+              {/* 4) 얼굴 미등록 경고 */}
+              <button
+                type="button"
+                onClick={() => navigate('/residents?filter=no-face')}
+                className={`text-left bg-white rounded-lg shadow-md p-6 border-l-4 ${
+                  (stats.residentsWithoutFace?.count ?? 0) > 0 ? 'border-red-500' : 'border-green-500'
+                } hover:shadow-lg transition group`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <div className={`p-2 rounded-lg ${
+                    (stats.residentsWithoutFace?.count ?? 0) > 0
+                      ? 'bg-red-100 text-red-600'
+                      : 'bg-green-100 text-green-600'
+                  }`}>
+                    {(stats.residentsWithoutFace?.count ?? 0) > 0 ? <AlertTriangle size={20} /> : <CheckCircle size={20} />}
+                  </div>
+                  <ChevronRight size={18} className="text-gray-300 group-hover:text-gray-500 transition" />
+                </div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-1">얼굴 미등록 어르신</h3>
+                <p className="text-3xl font-bold text-gray-900 mb-1">{stats.residentsWithoutFace?.count ?? 0}명</p>
+                <p className="text-xs text-gray-500 truncate" title={formatPreview(stats.residentsWithoutFace?.topNames, stats.residentsWithoutFace?.count)}>
+                  {(stats.residentsWithoutFace?.count ?? 0) === 0
+                    ? '모두 기준 얼굴 등록 완료'
+                    : formatPreview(stats.residentsWithoutFace?.topNames, stats.residentsWithoutFace?.count)}
+                </p>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {showUploadModal && (
