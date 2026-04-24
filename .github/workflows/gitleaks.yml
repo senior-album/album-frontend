@@ -16,8 +16,8 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      # 도입 초기 soft-fail — allowlist 정리 후 step 의 continue-on-error 제거로 strict 전환.
+      # Strict 모드 — full-history 스캔에서 leak 0 확인 후 전환.
+      # 신규 false positive 면 .gitleaksignore 에 fingerprint 추가.
       - uses: gitleaks/gitleaks-action@v2
-        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
