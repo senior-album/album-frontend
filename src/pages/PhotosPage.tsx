@@ -1,14 +1,26 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Filter, Upload, Loader2, Image, Heart, Share2, Link2, Copy, X, Eye, EyeOff, CheckSquare, Square, Tag, Plus, UserPlus, Trash2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import { apiClient } from '../utils/api';
 import { Photo, Resident } from '../types';
 
+// T-031: 미처리 = detected_unmatched | no_model | no_face (pending/queued 는 진행 중, classified/completed 는 성공이라 제외)
+const UNPROCESSED_STATUSES: ReadonlyArray<string> = ['detected_unmatched', 'no_model', 'no_face'];
+type PhotoFilter = 'all' | 'classified' | 'unclassified' | 'unprocessed';
+
 const PhotosPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlFilter = searchParams.get('filter');
+  const initialFilter: PhotoFilter =
+    urlFilter === 'classified' || urlFilter === 'unclassified' || urlFilter === 'unprocessed'
+      ? urlFilter
+      : 'all';
+
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [residents, setResidents] = useState<Resident[]>([]);
   const [loading, setLoading] = useState(true);
-  const [filterBy, setFilterBy] = useState<'all' | 'classified' | 'unclassified'>('all');
+  const [filterBy, setFilterBy] = useState<PhotoFilter>(initialFilter);
   const [selectedResident, setSelectedResident] = useState<string>('all');
   const [isUploading, setIsUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -284,10 +296,23 @@ const PhotosPage: React.FC = () => {
     }
   };
 
+  // T-031: URL param 과 filter state 동기화
+  const applyFilter = (next: PhotoFilter) => {
+    setFilterBy(next);
+    const sp = new URLSearchParams(searchParams);
+    if (next === 'all') sp.delete('filter');
+    else sp.set('filter', next);
+    setSearchParams(sp, { replace: true });
+  };
+
   const filteredPhotos = photos.filter((photo) => {
     let passes = true;
     if (filterBy === 'classified') passes = photo.is_processed;
     else if (filterBy === 'unclassified') passes = !photo.is_processed;
+    else if (filterBy === 'unprocessed') {
+      // 미처리 = AI 가 "안 한" 게 아니라 "실패 상태". 진행 중/성공 은 제외.
+      passes = UNPROCESSED_STATUSES.includes((photo as any).processing_status);
+    }
     if (selectedResident !== 'all') {
       // 다대다: matched_residents에 해당 입소자가 포함되어 있거나, 기존 resident_id 일치
       const inMatched = photo.matched_residents?.some(
@@ -379,10 +404,11 @@ const PhotosPage: React.FC = () => {
                   { key: 'all' as const, label: '모두' },
                   { key: 'classified' as const, label: '분류됨' },
                   { key: 'unclassified' as const, label: '미분류' },
+                  { key: 'unprocessed' as const, label: '미처리' },
                 ]).map((f) => (
                   <button
                     key={f.key}
-                    onClick={() => setFilterBy(f.key)}
+                    onClick={() => applyFilter(f.key)}
                     className={`px-4 py-2 rounded-lg font-medium transition ${
                       filterBy === f.key
                         ? 'bg-blue-500 text-white'

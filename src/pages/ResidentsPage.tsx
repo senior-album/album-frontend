@@ -1,8 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Edit2, Camera, Loader2, UserPlus, Phone, Trash2, CheckCircle, XCircle, Image } from 'lucide-react';
 import Layout from '../components/Layout';
 import { apiClient } from '../utils/api';
 import { Resident } from '../types';
+
+type ResidentFilter = 'all' | 'no-guardian' | 'no-face';
+
+const FILTER_LABELS: Record<ResidentFilter, string> = {
+  'all': '전체',
+  'no-guardian': '보호자 미연결',
+  'no-face': '얼굴 미등록',
+};
 
 interface FaceInfo {
   doc_id: string;
@@ -11,7 +20,15 @@ interface FaceInfo {
 }
 
 const ResidentsPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const filterParam = searchParams.get('filter');
+  const initialFilter: ResidentFilter =
+    filterParam === 'no-guardian' || filterParam === 'no-face' ? filterParam : 'all';
+
+  const [filter, setFilter] = useState<ResidentFilter>(initialFilter);
   const [residents, setResidents] = useState<Resident[]>([]);
+  // T-031: 승인된(is_approved && !is_rejected) 보호자가 배정된 resident_id set
+  const [approvedGuardianResidentIds, setApprovedGuardianResidentIds] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showFaceModal, setShowFaceModal] = useState(false);
@@ -53,10 +70,25 @@ const ResidentsPage: React.FC = () => {
   const fetchResidents = async () => {
     if (!facilityId) return;
     try {
-      const response = await apiClient.getFacilityResidents(facilityId);
-      setResidents(response.data);
+      const [residentsRes, guardiansRes] = await Promise.all([
+        apiClient.getFacilityResidents(facilityId),
+        // T-031: 승인된 guardian 이 없는 resident 필터 계산용. 실패해도 입소자 로드는 진행.
+        apiClient.getAllGuardians(facilityId).catch((err) => {
+          console.error('Failed to fetch guardians (filter will default to empty set):', err);
+          return { data: [] as any[] };
+        }),
+      ]);
+      setResidents(residentsRes.data);
+
+      const approvedIds = new Set<string>(
+        (Array.isArray(guardiansRes.data) ? guardiansRes.data : [])
+          .filter((g: any) => g.is_approved && !g.is_rejected && g.resident_id)
+          .map((g: any) => g.resident_id as string),
+      );
+      setApprovedGuardianResidentIds(approvedIds);
+
       // 각 입소자의 기준 사진 수를 가져옴
-      fetchFaceCounts(response.data);
+      fetchFaceCounts(residentsRes.data);
     } catch (err) {
       console.error('Failed to fetch residents:', err);
     } finally {
@@ -173,6 +205,27 @@ const ResidentsPage: React.FC = () => {
 
   const activeResidents = residents.filter((r) => r.is_active);
 
+  // T-031: URL param 과 filter state 동기화
+  const applyFilter = (next: ResidentFilter) => {
+    setFilter(next);
+    const sp = new URLSearchParams(searchParams);
+    if (next === 'all') sp.delete('filter');
+    else sp.set('filter', next);
+    setSearchParams(sp, { replace: true });
+  };
+
+  const filteredResidents = activeResidents.filter((r) => {
+    if (filter === 'no-guardian') return !approvedGuardianResidentIds.has(r.id);
+    if (filter === 'no-face') return (faceCounts[r.id] ?? 0) === 0;
+    return true;
+  });
+
+  const filterCounts: Record<ResidentFilter, number> = {
+    'all': activeResidents.length,
+    'no-guardian': activeResidents.filter((r) => !approvedGuardianResidentIds.has(r.id)).length,
+    'no-face': activeResidents.filter((r) => (faceCounts[r.id] ?? 0) === 0).length,
+  };
+
   return (
     <Layout>
       <div className="space-y-8">
@@ -190,6 +243,30 @@ const ResidentsPage: React.FC = () => {
             입소자 등록
           </button>
         </div>
+
+        {/* T-031: 필터 탭 */}
+        {!loading && activeResidents.length > 0 && (
+          <div className="flex gap-2 flex-wrap">
+            {(['all', 'no-guardian', 'no-face'] as ResidentFilter[]).map((key) => (
+              <button
+                key={key}
+                onClick={() => applyFilter(key)}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition ${
+                  filter === key
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                {FILTER_LABELS[key]}
+                <span className={`ml-2 px-2 py-0.5 rounded-full text-xs ${
+                  filter === key ? 'bg-white/20' : 'bg-white text-gray-500'
+                }`}>
+                  {filterCounts[key]}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
 
         {/* Loading */}
         {loading ? (
@@ -213,8 +290,16 @@ const ResidentsPage: React.FC = () => {
         ) : (
           /* Residents Table */
           <div className="bg-white rounded-lg shadow-soft overflow-hidden">
-            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50">
-              <h2 className="text-lg font-semibold text-gray-900">입소자 목록 ({activeResidents.length})</h2>
+            <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">
+                입소자 목록 ({filteredResidents.length}
+                {filter !== 'all' && ` / ${activeResidents.length}`})
+              </h2>
+              {filter !== 'all' && (
+                <span className="text-sm text-gray-500">
+                  필터: <span className="font-medium text-gray-700">{FILTER_LABELS[filter]}</span>
+                </span>
+              )}
             </div>
 
             <div className="overflow-x-auto">
@@ -233,7 +318,7 @@ const ResidentsPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
-                  {activeResidents.map((resident) => (
+                  {filteredResidents.map((resident) => (
                     <tr key={resident.id} className="hover:bg-gray-50 transition">
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">
                         {resident.name}
