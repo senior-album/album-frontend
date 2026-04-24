@@ -1,0 +1,31 @@
+# pre-commit hooks — 커밋 직전에 로컬에서 시크릿 누출 / 포맷 이슈 차단.
+#
+# 설치 (pre-commit 은 Python 기반 — pipx 또는 pip 로):
+#   pipx install pre-commit   # 또는
+#   pip install pre-commit
+#   pre-commit install
+#
+# 수동 전체 스캔:
+#   pre-commit run --all-files
+#
+# 참고: 프론트엔드 코드 내부에는 시크릿이 들어갈 일이 거의 없지만 (빌드 타임에
+# VITE_* 로 주입되는 값은 공개되는 것이 기본), 동일한 방어 레이어를 backend 와
+# 통일해 "실수로 뭔가 커밋됐을 때" 걸러지도록 한다.
+
+repos:
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.21.2
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=2000"]
+      - id: check-yaml
+      - id: check-json
+      - id: detect-private-key
