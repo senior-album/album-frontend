@@ -99,8 +99,13 @@ class ApiClient {
     password: string;
     name: string;
     phone?: string;
+    consents?: Array<{ document_id: string; agreed: boolean }>;
   }) {
     return this.instance.post('/auth/register/guardian', data);
+  }
+
+  public getActiveConsents() {
+    return this.instance.get('/consents/active');
   }
 
   public getMe() {
