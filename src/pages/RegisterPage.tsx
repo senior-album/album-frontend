@@ -1,11 +1,30 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/api';
-import { Mail, Lock, User, Phone, ArrowLeft, Building2, MapPin } from 'lucide-react';
+import { Mail, Lock, User, Phone, ArrowLeft, Building2, MapPin, FileText, X } from 'lucide-react';
 import FacilityPicker, { FacilitySearchResult } from '../components/FacilityPicker';
 
 type Role = 'admin' | 'staff' | 'guardian';
+
+type ConsentDocument = {
+  id: string;
+  type: string;
+  version: string;
+  title: string;
+  content: string;
+  is_mandatory: boolean;
+  effective_from: string;
+};
+
+// 표시 순서 — 필수 먼저, 선택 마지막. 백엔드에서 같은 type 의 활성 row 가 여럿일 일은 없지만,
+// 혹시 유실/중복 시에도 사용자에게 일관된 순서를 보여주기 위한 정렬 기준.
+const CONSENT_ORDER: Record<string, number> = {
+  terms_guardian: 0,
+  privacy: 1,
+  sensitive_info: 2,
+  marketing: 3,
+};
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -28,8 +47,49 @@ const RegisterPage: React.FC = () => {
   // 시설 직원 전용 — 검색으로 선택한 시설
   const [selectedFacility, setSelectedFacility] = useState<FacilitySearchResult | null>(null);
 
+  // 보호자 전용 — 활성 약관 + 사용자 체크 상태 (document_id → agreed)
+  const [consentDocs, setConsentDocs] = useState<ConsentDocument[]>([]);
+  const [consentChecked, setConsentChecked] = useState<Record<string, boolean>>({});
+  const [consentsLoading, setConsentsLoading] = useState(false);
+  const [openDocId, setOpenDocId] = useState<string | null>(null);
+
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // 보호자 step 진입 시 활성 약관 1회 로드. (admin/staff 는 §15 동의 대상이 아님 — B2B 계약으로 처리.)
+  useEffect(() => {
+    if (step !== 2 || role !== 'guardian' || consentDocs.length > 0) return;
+    let cancelled = false;
+    setConsentsLoading(true);
+    apiClient
+      .getActiveConsents()
+      .then((res) => {
+        if (cancelled) return;
+        const docs: ConsentDocument[] = res.data ?? [];
+        docs.sort((a, b) => (CONSENT_ORDER[a.type] ?? 99) - (CONSENT_ORDER[b.type] ?? 99));
+        setConsentDocs(docs);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setError('약관을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.');
+      })
+      .finally(() => {
+        if (!cancelled) setConsentsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [step, role, consentDocs.length]);
+
+  const toggleConsent = (docId: string) => {
+    setConsentChecked((prev) => ({ ...prev, [docId]: !prev[docId] }));
+  };
+
+  const allMandatoryChecked = consentDocs
+    .filter((d) => d.is_mandatory)
+    .every((d) => consentChecked[d.id]);
+
+  const openDoc = consentDocs.find((d) => d.id === openDocId) ?? null;
 
   const validate = (): string | null => {
     if (!name.trim()) return '이름을 입력해주세요.';
@@ -44,6 +104,10 @@ const RegisterPage: React.FC = () => {
       if (!facilityAddress.trim()) return '시설 주소를 입력해주세요.';
     }
     if (role === 'staff' && !selectedFacility) return '시설을 검색해 선택해주세요.';
+    if (role === 'guardian') {
+      if (consentDocs.length === 0) return '약관을 불러오지 못했습니다. 새로고침 후 다시 시도해주세요.';
+      if (!allMandatoryChecked) return '필수 약관에 모두 동의해야 가입할 수 있습니다.';
+    }
     return null;
   };
 
@@ -81,11 +145,17 @@ const RegisterPage: React.FC = () => {
           facilityCode: selectedFacility!.code,
         });
       } else {
+        // 모든 활성 약관에 대해 응답 기록 — 선택 항목은 거부도 함께 보내 audit log 남김.
+        const consents = consentDocs.map((d) => ({
+          document_id: d.id,
+          agreed: !!consentChecked[d.id],
+        }));
         response = await apiClient.registerGuardian({
           email,
           password,
           name,
           phone: phone || undefined,
+          consents,
         });
       }
 
@@ -273,6 +343,59 @@ const RegisterPage: React.FC = () => {
               </div>
             )}
 
+            {/* 보호자: 약관 동의 — 개인정보보호법 §15 (동의), §22 (처리방침), §23 (민감정보) */}
+            {role === 'guardian' && (
+              <div className="border border-gray-200 rounded-xl p-4 space-y-2">
+                <h3 className="text-sm font-bold text-gray-700">약관 동의</h3>
+                {consentsLoading && (
+                  <p className="text-xs text-gray-400">약관을 불러오는 중...</p>
+                )}
+                {!consentsLoading && consentDocs.length === 0 && (
+                  <p className="text-xs text-red-500">약관을 불러오지 못했습니다.</p>
+                )}
+                {consentDocs.map((doc) => (
+                  <label
+                    key={doc.id}
+                    className="flex items-start gap-2 py-1.5 cursor-pointer select-none"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!consentChecked[doc.id]}
+                      onChange={() => toggleConsent(doc.id)}
+                      className="mt-0.5 w-4 h-4 text-primary border-gray-300 rounded focus:ring-primary"
+                    />
+                    <span className="flex-1 text-sm text-gray-700">
+                      <span
+                        className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-bold mr-1.5 ${
+                          doc.is_mandatory
+                            ? 'bg-red-100 text-red-600'
+                            : 'bg-gray-100 text-gray-500'
+                        }`}
+                      >
+                        {doc.is_mandatory ? '필수' : '선택'}
+                      </span>
+                      {doc.title}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setOpenDocId(doc.id);
+                      }}
+                      className="text-xs text-primary hover:underline inline-flex items-center gap-0.5 shrink-0"
+                    >
+                      <FileText size={12} /> 보기
+                    </button>
+                  </label>
+                ))}
+                {consentDocs.length > 0 && !allMandatoryChecked && (
+                  <p className="text-xs text-gray-400 pt-1">
+                    필수 항목에 모두 동의해야 가입할 수 있습니다.
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* 비밀번호 */}
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-1">비밀번호</label>
@@ -327,6 +450,48 @@ const RegisterPage: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* 약관 본문 모달 — 사용자가 "보기" 누르면 전체 본문 표시 */}
+      {openDoc && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={() => setOpenDocId(null)}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[80vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+              <div>
+                <h3 className="text-base font-bold text-gray-900">{openDoc.title}</h3>
+                <p className="text-xs text-gray-400">버전 {openDoc.version}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setOpenDocId(null)}
+                className="text-gray-400 hover:text-gray-700 p-1"
+                aria-label="닫기"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="overflow-y-auto px-5 py-4">
+              <pre className="whitespace-pre-wrap text-xs text-gray-700 font-sans leading-relaxed">
+                {openDoc.content}
+              </pre>
+            </div>
+            <div className="px-5 py-3 border-t border-gray-100 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setOpenDocId(null)}
+                className="text-sm bg-primary text-white px-4 py-1.5 rounded-lg hover:opacity-90"
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
