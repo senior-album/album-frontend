@@ -112,6 +112,30 @@ class ApiClient {
     return this.instance.get('/auth/me');
   }
 
+  // ==================== Legal (T-020 PR3) ====================
+
+  public getLegalSettings() {
+    return this.instance.get<Record<string, string>>('/legal/settings');
+  }
+
+  public updateLegalSettings(settings: Record<string, string>) {
+    return this.instance.put<Record<string, string>>('/legal/settings', { settings });
+  }
+
+  public getAllConsentDocuments() {
+    return this.instance.get('/consents/admin/all');
+  }
+
+  public publishConsentDocument(data: {
+    type: string;
+    version: string;
+    title: string;
+    content: string;
+    is_mandatory?: boolean;
+  }) {
+    return this.instance.post('/consents/admin/publish', data);
+  }
+
   // ==================== Phone OTP ====================
 
   public sendPhoneOtp(phone: string) {
