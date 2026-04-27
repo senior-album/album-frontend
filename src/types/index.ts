@@ -6,6 +6,7 @@ export interface User {
   name: string;
   role: UserRole;
   is_admin?: boolean;
+  is_operator?: boolean;
   facility_id?: string;
   phone?: string;
   profile_image?: string;

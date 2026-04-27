@@ -14,10 +14,12 @@ import {
   ImageOff,
   AlertTriangle,
   ChevronRight,
+  Settings,
 } from 'lucide-react';
 import Layout from '../components/Layout';
 import StatsCard from '../components/StatsCard';
 import { apiClient } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 
 interface DashboardStats {
   totalPhotos: number;
@@ -43,6 +45,7 @@ const formatPreview = (names: string[] | undefined, total: number | undefined): 
 
 const DashboardPage: React.FC = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [codeCopied, setCodeCopied] = useState(false);
   const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -53,8 +56,7 @@ const DashboardPage: React.FC = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const facility = JSON.parse(localStorage.getItem('facility') || '{}');
-  const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const facilityId = user.facility_id || facility.id;
+  const facilityId = user?.facility_id || facility.id;
   const facilityName = stats?.facilityName || facility.name || '시설 이름';
   const facilityCode = stats?.facilityCode || facility.code || '';
 
@@ -139,13 +141,25 @@ const DashboardPage: React.FC = () => {
               )}
             </div>
           </div>
-          <button
-            onClick={openModal}
-            className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md"
-          >
-            <Upload size={20} />
-            사진 업로드
-          </button>
+          <div className="flex items-center gap-2">
+            {user?.is_operator && (
+              <button
+                onClick={() => navigate('/admin/legal-settings')}
+                className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                title="운영자 — 회사 정보 / 약관 본문 편집"
+              >
+                <Settings size={16} />
+                법령 설정
+              </button>
+            )}
+            <button
+              onClick={openModal}
+              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md"
+            >
+              <Upload size={20} />
+              사진 업로드
+            </button>
+          </div>
         </div>
 
         {loading ? (

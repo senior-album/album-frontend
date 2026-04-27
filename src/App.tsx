@@ -16,6 +16,7 @@ import SharedPhotoPage from './pages/SharedPhotoPage';
 import GuardianMyPage from './pages/GuardianMyPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
+import AdminLegalSettingsPage from './pages/AdminLegalSettingsPage';
 
 const App: React.FC = () => {
   return (
@@ -30,6 +31,9 @@ const App: React.FC = () => {
           <Route path="/shared/:shareToken" element={<SharedPhotoPage />} />
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
+
+          {/* Operator-only route — AdminLegalSettingsPage 안에서 user.is_operator 검사 후 redirect */}
+          <Route path="/admin/legal-settings" element={<AdminLegalSettingsPage />} />
 
           {/* Staff Routes */}
           <Route
