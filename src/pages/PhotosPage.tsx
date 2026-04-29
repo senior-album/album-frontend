@@ -9,6 +9,10 @@ import { Photo, Resident } from '../types';
 const UNPROCESSED_STATUSES: ReadonlyArray<string> = ['detected_unmatched', 'no_model', 'no_face'];
 type PhotoFilter = 'all' | 'classified' | 'unclassified' | 'unprocessed';
 
+// 페이지네이션 — 초기 100장, "더 보기" 마다 100장씩 추가.
+// 백엔드는 skip/limit 지원, 응답이 PAGE_SIZE 미만이면 끝 도달로 판정.
+const PAGE_SIZE = 100;
+
 const PhotosPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const urlFilter = searchParams.get('filter');
@@ -32,6 +36,14 @@ const PhotosPage: React.FC = () => {
   const [tagLoading, setTagLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 페이지네이션 상태
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  // refresh 시점에 현재 로드된 개수만큼 다시 가져와 페이징 상태 유지하기 위한 ref.
+  // photos.length 를 fetchData useCallback deps 에 넣으면 photos 변경마다
+  // fetchData 가 재생성돼 useEffect 가 무한 호출됨 — ref 로 우회.
+  const photosCountRef = useRef(0);
+
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const facility = JSON.parse(localStorage.getItem('facility') || '{}');
   const facilityId = user.facility_id || facility.id;
@@ -42,18 +54,47 @@ const PhotosPage: React.FC = () => {
       return;
     }
     try {
+      // 사용자가 "더 보기" 로 N 장을 로드했으면 refresh 시에도 N 장 다시 가져와
+      // 페이징 상태 유지 (auto-refresh 가 paged 데이터를 날리지 않도록).
+      const refreshLimit = Math.max(photosCountRef.current, PAGE_SIZE);
       const [photosRes, residentsRes] = await Promise.all([
-        apiClient.getFacilityPhotos(facilityId),
+        apiClient.getFacilityPhotos(facilityId, { skip: 0, limit: refreshLimit }),
         apiClient.getFacilityResidents(facilityId),
       ]);
-      setPhotos(Array.isArray(photosRes.data) ? photosRes.data : []);
+      const list = Array.isArray(photosRes.data) ? photosRes.data : [];
+      setPhotos(list);
       setResidents(Array.isArray(residentsRes.data) ? residentsRes.data : []);
+      // 응답이 가득 차서 왔으면 그 다음이 있을 가능성 — 더 보기 버튼 노출.
+      setHasMore(list.length === refreshLimit);
     } catch (err: any) {
       console.error('[PhotosPage] Failed to fetch data:', err?.response?.status, err?.response?.data, err);
     } finally {
       setLoading(false);
     }
   }, [facilityId]);
+
+  // photos 길이를 ref 에 동기화 — fetchData 가 deps 없이 최신 값 참조 가능.
+  useEffect(() => {
+    photosCountRef.current = photos.length;
+  }, [photos.length]);
+
+  const loadMore = async () => {
+    if (loadingMore || !hasMore || !facilityId) return;
+    setLoadingMore(true);
+    try {
+      const res = await apiClient.getFacilityPhotos(facilityId, {
+        skip: photos.length,
+        limit: PAGE_SIZE,
+      });
+      const next = Array.isArray(res.data) ? res.data : [];
+      setPhotos((prev) => [...prev, ...next]);
+      setHasMore(next.length === PAGE_SIZE);
+    } catch (err: any) {
+      console.error('[PhotosPage] loadMore failed:', err?.response?.status, err);
+    } finally {
+      setLoadingMore(false);
+    }
+  };
 
   useEffect(() => {
     fetchData();
@@ -619,6 +660,27 @@ const PhotosPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+
+              {/* 더 보기 — 백엔드에 추가 페이지가 남아있을 때만 노출 */}
+              {hasMore && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    type="button"
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                    className="inline-flex items-center gap-2 px-6 py-2.5 bg-white border border-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        불러오는 중...
+                      </>
+                    ) : (
+                      <>더 보기 (현재 {photos.length}장)</>
+                    )}
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
