@@ -160,12 +160,18 @@ class ApiClient {
     return this.instance.get(`/facilities/${facilityId}/stats`);
   }
 
-  public getFacilityResidents(facilityId: string) {
-    return this.instance.get(`/facilities/${facilityId}/residents`);
+  public getFacilityResidents(facilityId: string, params?: { skip?: number; limit?: number }) {
+    return this.instance.get(`/facilities/${facilityId}/residents`, {
+      params: { limit: 500, ...params },
+    });
   }
 
-  public getFacilityPhotos(facilityId: string) {
-    return this.instance.get(`/facilities/${facilityId}/photos`);
+  public getFacilityPhotos(facilityId: string, params?: { skip?: number; limit?: number }) {
+    // 백엔드 기본 limit=50 — 명시 안 하면 50장 컷. launch target (30명 사용자 / 시설 1곳)
+    // 기준 500 이면 충분, 그 이상은 별도 페이지네이션 PR (B) 에서 처리.
+    return this.instance.get(`/facilities/${facilityId}/photos`, {
+      params: { limit: 500, ...params },
+    });
   }
 
   // ==================== Residents ====================
