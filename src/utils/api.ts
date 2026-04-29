@@ -188,6 +188,20 @@ class ApiClient {
     return this.instance.delete(`/residents/${residentId}/faces/${docId}`);
   }
 
+  // T-030: 입소자 CSV 일괄 import
+  public downloadResidentImportTemplate() {
+    // CSV 본문을 그대로 받아 브라우저 다운로드 — responseType='blob' 으로 binary 보존.
+    return this.instance.get('/residents/import/template', { responseType: 'blob' });
+  }
+
+  public importResidentsCsv(facilityId: string, file: File) {
+    const form = new FormData();
+    form.append('file', file);
+    return this.instance.post(`/residents/import?facility_id=${facilityId}`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  }
+
   // ==================== Photos ====================
 
   public uploadPhoto(_facilityId: string, photoData: FormData) {
