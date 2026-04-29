@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Edit2, Camera, Loader2, UserPlus, Phone, Trash2, CheckCircle, XCircle, Image } from 'lucide-react';
+import { Plus, Edit2, Camera, Loader2, UserPlus, Phone, Trash2, CheckCircle, XCircle, Image, Upload, Download, FileSpreadsheet, X } from 'lucide-react';
 import Layout from '../components/Layout';
 import { apiClient } from '../utils/api';
 import { Resident } from '../types';
@@ -55,6 +55,19 @@ const ResidentsPage: React.FC = () => {
   const [inviteRelationship, setInviteRelationship] = useState('');
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteSending, setInviteSending] = useState(false);
+
+  // T-030: CSV 일괄 import
+  const [showCsvModal, setShowCsvModal] = useState(false);
+  const [csvFile, setCsvFile] = useState<File | null>(null);
+  const [csvUploading, setCsvUploading] = useState(false);
+  const [csvResult, setCsvResult] = useState<{
+    created_count: number;
+    error_count: number;
+    created: { row: number; name: string }[];
+    errors: { row: number; name?: string; reason: string }[];
+  } | null>(null);
+  const [csvError, setCsvError] = useState<string | null>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -214,6 +227,55 @@ const ResidentsPage: React.FC = () => {
     setSearchParams(sp, { replace: true });
   };
 
+  // T-030: CSV 일괄 import
+  const openCsvModal = () => {
+    setCsvFile(null);
+    setCsvResult(null);
+    setCsvError(null);
+    setShowCsvModal(true);
+  };
+
+  const closeCsvModal = () => {
+    if (csvUploading) return;
+    setShowCsvModal(false);
+  };
+
+  const handleCsvDownloadTemplate = async () => {
+    try {
+      const res = await apiClient.downloadResidentImportTemplate();
+      const url = URL.createObjectURL(new Blob([res.data], { type: 'text/csv' }));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'residents_template.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      setCsvError('템플릿 다운로드에 실패했습니다.');
+    }
+  };
+
+  const handleCsvUpload = async () => {
+    if (!csvFile || !facilityId) return;
+    setCsvUploading(true);
+    setCsvError(null);
+    setCsvResult(null);
+    try {
+      const res = await apiClient.importResidentsCsv(facilityId, csvFile);
+      setCsvResult(res.data);
+      // 1명이라도 성공했으면 목록 새로고침
+      if (res.data?.created_count > 0) {
+        await fetchResidents();
+      }
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail || '업로드에 실패했습니다.';
+      setCsvError(typeof detail === 'string' ? detail : JSON.stringify(detail));
+    } finally {
+      setCsvUploading(false);
+    }
+  };
+
   const filteredResidents = activeResidents.filter((r) => {
     if (filter === 'no-guardian') return !approvedGuardianResidentIds.has(r.id);
     if (filter === 'no-face') return (faceCounts[r.id] ?? 0) === 0;
@@ -235,13 +297,23 @@ const ResidentsPage: React.FC = () => {
             <h1 className="text-3xl font-bold text-gray-900">입소자 관리</h1>
             <p className="text-gray-600 mt-1">총 {residents.length}명 ({activeResidents.length}명 활성)</p>
           </div>
-          <button
-            onClick={handleAddResident}
-            className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition shadow-soft"
-          >
-            <Plus size={20} />
-            입소자 등록
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openCsvModal}
+              className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+              title="CSV 파일로 한 번에 최대 100명 등록"
+            >
+              <FileSpreadsheet size={18} />
+              CSV 일괄 등록
+            </button>
+            <button
+              onClick={handleAddResident}
+              className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition shadow-soft"
+            >
+              <Plus size={20} />
+              입소자 등록
+            </button>
+          </div>
         </div>
 
         {/* T-031: 필터 탭 */}
@@ -854,6 +926,177 @@ const ResidentsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* T-030: CSV 일괄 import 모달 */}
+      {showCsvModal && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={closeCsvModal}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[85vh] flex flex-col"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <FileSpreadsheet size={18} className="text-primary" />
+                <h3 className="text-base font-bold text-gray-900">입소자 CSV 일괄 등록</h3>
+              </div>
+              <button
+                type="button"
+                onClick={closeCsvModal}
+                disabled={csvUploading}
+                className="text-gray-400 hover:text-gray-700 p-1 disabled:opacity-50"
+                aria-label="닫기"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="overflow-y-auto px-5 py-4 space-y-4">
+              {/* 1) 안내 + 템플릿 다운로드 */}
+              <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 text-sm text-blue-900 space-y-2">
+                <p className="font-medium">CSV 형식</p>
+                <ul className="list-disc pl-5 space-y-0.5 text-xs">
+                  <li>헤더 필수: <code className="font-mono">name, birth_date, gender, room_number, medical_notes</code></li>
+                  <li><code className="font-mono">name</code> 만 필수, 나머지는 비워도 됩니다.</li>
+                  <li>한 번에 최대 100명까지 등록.</li>
+                  <li>주민번호 뒷자리는 저장하지 않습니다.</li>
+                </ul>
+                <button
+                  type="button"
+                  onClick={handleCsvDownloadTemplate}
+                  className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                >
+                  <Download size={14} />
+                  템플릿 CSV 다운로드
+                </button>
+              </div>
+
+              {/* 2) 파일 선택 */}
+              {!csvResult && (
+                <div>
+                  <input
+                    ref={csvInputRef}
+                    type="file"
+                    accept=".csv,text/csv"
+                    onChange={(e) => {
+                      setCsvFile(e.target.files?.[0] ?? null);
+                      setCsvError(null);
+                    }}
+                    className="hidden"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => csvInputRef.current?.click()}
+                    disabled={csvUploading}
+                    className="w-full border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-primary hover:bg-blue-50 transition disabled:opacity-50"
+                  >
+                    <Upload size={24} className="mx-auto text-gray-400 mb-2" />
+                    {csvFile ? (
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">{csvFile.name}</span>
+                        <span className="text-gray-400 ml-1">({(csvFile.size / 1024).toFixed(1)} KB)</span>
+                      </p>
+                    ) : (
+                      <p className="text-sm text-gray-500">파일 선택 (CSV, 1MB 이하)</p>
+                    )}
+                  </button>
+                </div>
+              )}
+
+              {/* 3) 에러 */}
+              {csvError && (
+                <p className="bg-red-50 border border-red-200 text-red-700 rounded p-3 text-sm">
+                  {csvError}
+                </p>
+              )}
+
+              {/* 4) 결과 */}
+              {csvResult && (
+                <div className="space-y-3">
+                  <div className="flex gap-3">
+                    <div className="flex-1 bg-green-50 border border-green-200 rounded-lg p-3">
+                      <p className="text-xs text-green-700">등록 완료</p>
+                      <p className="text-2xl font-bold text-green-700">{csvResult.created_count}명</p>
+                    </div>
+                    <div className="flex-1 bg-red-50 border border-red-200 rounded-lg p-3">
+                      <p className="text-xs text-red-700">오류</p>
+                      <p className="text-2xl font-bold text-red-700">{csvResult.error_count}건</p>
+                    </div>
+                  </div>
+
+                  {csvResult.errors.length > 0 && (
+                    <div>
+                      <p className="text-xs font-medium text-gray-700 mb-1.5">오류 상세</p>
+                      <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto divide-y divide-gray-100">
+                        {csvResult.errors.map((err, i) => (
+                          <div key={i} className="px-3 py-2 text-xs flex items-start gap-2">
+                            <span className="font-mono text-gray-400 shrink-0">행 {err.row}</span>
+                            {err.name && <span className="text-gray-600 shrink-0">· {err.name}</span>}
+                            <span className="text-red-600 flex-1">{err.reason}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {csvResult.created_count > 0 && (
+                    <p className="text-xs text-gray-500">
+                      입소자 목록이 자동으로 새로고침되었습니다.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="px-5 py-3 border-t border-gray-100 flex justify-end gap-2">
+              {csvResult ? (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCsvResult(null);
+                      setCsvFile(null);
+                      setCsvError(null);
+                    }}
+                    className="px-4 py-1.5 text-sm border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
+                  >
+                    추가 업로드
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeCsvModal}
+                    className="px-4 py-1.5 text-sm bg-primary text-white rounded-lg hover:opacity-90"
+                  >
+                    닫기
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={closeCsvModal}
+                    disabled={csvUploading}
+                    className="px-4 py-1.5 text-sm border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCsvUpload}
+                    disabled={!csvFile || csvUploading}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 text-sm bg-primary text-white rounded-lg hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {csvUploading ? <Loader2 size={14} className="animate-spin" /> : <Upload size={14} />}
+                    {csvUploading ? '업로드 중...' : '업로드'}
+                  </button>
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
