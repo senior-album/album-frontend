@@ -147,6 +147,7 @@ const AdminUsersPage: React.FC = () => {
             <p className="text-xs text-gray-500">운영자 전용 — 활성/권한 토글 + 시설 배정</p>
           </div>
           <nav className="flex gap-3 text-xs">
+            <Link to="/admin/facilities" className="text-gray-500 hover:text-gray-900">시설 관리</Link>
             <Link to="/admin/legal-settings" className="text-gray-500 hover:text-gray-900">법령 설정</Link>
           </nav>
         </div>
