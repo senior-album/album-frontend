@@ -361,6 +361,31 @@ class ApiClient {
       resident_id: residentId,
     });
   }
+
+  // ==================== Admin (운영자 전용, T-144~) ====================
+
+  public listAdminUsers(params?: {
+    role?: string;
+    facility_id?: string;
+    is_active?: boolean | string;
+    q?: string;
+    page?: number;
+    size?: number;
+  }) {
+    return this.instance.get('/admin/users', { params });
+  }
+
+  public patchAdminUser(
+    userId: string,
+    body: {
+      is_active?: boolean;
+      is_admin?: boolean;
+      is_operator?: boolean;
+      facility_id?: string | null;
+    },
+  ) {
+    return this.instance.patch(`/admin/users/${userId}`, body);
+  }
 }
 
 export const apiClient = new ApiClient();

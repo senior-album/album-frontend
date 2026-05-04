@@ -17,6 +17,7 @@ import GuardianMyPage from './pages/GuardianMyPage';
 import PrivacyPage from './pages/PrivacyPage';
 import TermsPage from './pages/TermsPage';
 import AdminLegalSettingsPage from './pages/AdminLegalSettingsPage';
+import AdminUsersPage from './pages/AdminUsersPage';
 
 const App: React.FC = () => {
   return (
@@ -32,8 +33,9 @@ const App: React.FC = () => {
           <Route path="/privacy" element={<PrivacyPage />} />
           <Route path="/terms" element={<TermsPage />} />
 
-          {/* Operator-only route — AdminLegalSettingsPage 안에서 user.is_operator 검사 후 redirect */}
+          {/* Operator-only routes — 각 페이지 안에서 user.is_operator 검사 후 redirect */}
           <Route path="/admin/legal-settings" element={<AdminLegalSettingsPage />} />
+          <Route path="/admin/users" element={<AdminUsersPage />} />
 
           {/* Staff Routes */}
           <Route
