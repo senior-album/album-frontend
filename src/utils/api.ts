@@ -386,6 +386,51 @@ class ApiClient {
   ) {
     return this.instance.patch(`/admin/users/${userId}`, body);
   }
+
+  // T-145
+  public listAdminFacilities(params?: { q?: string; page?: number; size?: number }) {
+    return this.instance.get('/admin/facilities', { params });
+  }
+
+  public createAdminFacility(body: { name: string; address: string; phone?: string; code?: string }) {
+    return this.instance.post('/admin/facilities', body);
+  }
+
+  public patchAdminFacility(
+    facilityId: string,
+    body: { name?: string; address?: string; phone?: string },
+  ) {
+    return this.instance.patch(`/admin/facilities/${facilityId}`, body);
+  }
+
+  // T-146
+  public listAdminGuardians(params?: {
+    facility_id?: string;
+    state?: 'pending' | 'approved' | 'rejected';
+    page?: number;
+    size?: number;
+  }) {
+    return this.instance.get('/admin/guardians', { params });
+  }
+
+  // T-147
+  public listAdminPhotoJobs(params?: {
+    status?: 'pending' | 'processing' | 'completed' | 'failed' | string;
+    facility_id?: string;
+    page?: number;
+    size?: number;
+  }) {
+    return this.instance.get('/admin/photo-jobs', { params });
+  }
+
+  public retryAdminPhotoJob(jobId: string) {
+    return this.instance.post(`/admin/photo-jobs/${jobId}/retry`);
+  }
+
+  // T-148
+  public getAdminStats() {
+    return this.instance.get('/admin/stats');
+  }
 }
 
 export const apiClient = new ApiClient();

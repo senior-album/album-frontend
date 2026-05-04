@@ -145,12 +145,44 @@ const DashboardPage: React.FC = () => {
             {user?.is_operator && (
               <>
                 <button
+                  onClick={() => navigate('/admin/stats')}
+                  className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-700 transition shadow-sm"
+                  title="운영자 — 통계 대시보드 (홈)"
+                >
+                  <Settings size={16} />
+                  운영자 홈
+                </button>
+                <button
                   onClick={() => navigate('/admin/users')}
                   className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
                   title="운영자 — 전체 유저 관리"
                 >
                   <Settings size={16} />
                   유저 관리
+                </button>
+                <button
+                  onClick={() => navigate('/admin/facilities')}
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  title="운영자 — 전체 시설 관리"
+                >
+                  <Settings size={16} />
+                  시설 관리
+                </button>
+                <button
+                  onClick={() => navigate('/admin/guardians')}
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  title="운영자 — 보호자 승인 현황 (전체 시설 across)"
+                >
+                  <Settings size={16} />
+                  보호자 승인
+                </button>
+                <button
+                  onClick={() => navigate('/admin/photo-jobs')}
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  title="운영자 — 사진 처리 큐 모니터링"
+                >
+                  <Settings size={16} />
+                  사진 처리
                 </button>
                 <button
                   onClick={() => navigate('/admin/legal-settings')}
