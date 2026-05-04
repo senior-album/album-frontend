@@ -426,6 +426,11 @@ class ApiClient {
   public retryAdminPhotoJob(jobId: string) {
     return this.instance.post(`/admin/photo-jobs/${jobId}/retry`);
   }
+
+  // T-148
+  public getAdminStats() {
+    return this.instance.get('/admin/stats');
+  }
 }
 
 export const apiClient = new ApiClient();
