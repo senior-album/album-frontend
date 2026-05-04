@@ -166,10 +166,13 @@ const AdminLegalSettingsPage: React.FC = () => {
           <Link to="/dashboard" className="p-2 hover:bg-gray-100 rounded-lg transition" aria-label="뒤로">
             <ArrowLeft size={20} />
           </Link>
-          <div>
+          <div className="flex-1">
             <h1 className="text-xl font-bold text-gray-900">법령 설정</h1>
             <p className="text-xs text-gray-500">운영자 전용 — 회사 정보 + 약관 본문 발행</p>
           </div>
+          <nav className="flex gap-3 text-xs">
+            <Link to="/admin/users" className="text-gray-500 hover:text-gray-900">유저 관리</Link>
+          </nav>
         </div>
       </header>
 

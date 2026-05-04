@@ -143,14 +143,24 @@ const DashboardPage: React.FC = () => {
           </div>
           <div className="flex items-center gap-2">
             {user?.is_operator && (
-              <button
-                onClick={() => navigate('/admin/legal-settings')}
-                className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
-                title="운영자 — 회사 정보 / 약관 본문 편집"
-              >
-                <Settings size={16} />
-                법령 설정
-              </button>
+              <>
+                <button
+                  onClick={() => navigate('/admin/users')}
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  title="운영자 — 전체 유저 관리"
+                >
+                  <Settings size={16} />
+                  유저 관리
+                </button>
+                <button
+                  onClick={() => navigate('/admin/legal-settings')}
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  title="운영자 — 회사 정보 / 약관 본문 편집"
+                >
+                  <Settings size={16} />
+                  법령 설정
+                </button>
+              </>
             )}
             <button
               onClick={openModal}
