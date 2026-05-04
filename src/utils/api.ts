@@ -386,6 +386,22 @@ class ApiClient {
   ) {
     return this.instance.patch(`/admin/users/${userId}`, body);
   }
+
+  // T-145
+  public listAdminFacilities(params?: { q?: string; page?: number; size?: number }) {
+    return this.instance.get('/admin/facilities', { params });
+  }
+
+  public createAdminFacility(body: { name: string; address: string; phone?: string; code?: string }) {
+    return this.instance.post('/admin/facilities', body);
+  }
+
+  public patchAdminFacility(
+    facilityId: string,
+    body: { name?: string; address?: string; phone?: string },
+  ) {
+    return this.instance.patch(`/admin/facilities/${facilityId}`, body);
+  }
 }
 
 export const apiClient = new ApiClient();
