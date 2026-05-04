@@ -149,6 +149,7 @@ const AdminUsersPage: React.FC = () => {
           <nav className="flex gap-3 text-xs">
             <Link to="/admin/facilities" className="text-gray-500 hover:text-gray-900">시설 관리</Link>
             <Link to="/admin/guardians" className="text-gray-500 hover:text-gray-900">보호자 승인</Link>
+            <Link to="/admin/photo-jobs" className="text-gray-500 hover:text-gray-900">사진 처리</Link>
             <Link to="/admin/legal-settings" className="text-gray-500 hover:text-gray-900">법령 설정</Link>
           </nav>
         </div>

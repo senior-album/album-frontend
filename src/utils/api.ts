@@ -412,6 +412,20 @@ class ApiClient {
   }) {
     return this.instance.get('/admin/guardians', { params });
   }
+
+  // T-147
+  public listAdminPhotoJobs(params?: {
+    status?: 'pending' | 'processing' | 'completed' | 'failed' | string;
+    facility_id?: string;
+    page?: number;
+    size?: number;
+  }) {
+    return this.instance.get('/admin/photo-jobs', { params });
+  }
+
+  public retryAdminPhotoJob(jobId: string) {
+    return this.instance.post(`/admin/photo-jobs/${jobId}/retry`);
+  }
 }
 
 export const apiClient = new ApiClient();
