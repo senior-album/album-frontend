@@ -120,6 +120,7 @@ const AdminGuardiansPage: React.FC = () => {
             <p className="text-xs text-gray-500">운영자 전용 — 전체 시설 across 모니터링 (승인 액션은 시설장 페이지에서)</p>
           </div>
           <nav className="flex gap-3 text-xs">
+            <Link to="/admin/stats" className="text-gray-500 hover:text-gray-900">통계</Link>
             <Link to="/admin/users" className="text-gray-500 hover:text-gray-900">유저 관리</Link>
             <Link to="/admin/facilities" className="text-gray-500 hover:text-gray-900">시설 관리</Link>
             <Link to="/admin/photo-jobs" className="text-gray-500 hover:text-gray-900">사진 처리</Link>

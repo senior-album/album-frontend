@@ -21,6 +21,7 @@ import AdminUsersPage from './pages/AdminUsersPage';
 import AdminFacilitiesPage from './pages/AdminFacilitiesPage';
 import AdminGuardiansPage from './pages/AdminGuardiansPage';
 import AdminPhotoJobsPage from './pages/AdminPhotoJobsPage';
+import AdminStatsPage from './pages/AdminStatsPage';
 
 const App: React.FC = () => {
   return (
@@ -42,6 +43,7 @@ const App: React.FC = () => {
           <Route path="/admin/facilities" element={<AdminFacilitiesPage />} />
           <Route path="/admin/guardians" element={<AdminGuardiansPage />} />
           <Route path="/admin/photo-jobs" element={<AdminPhotoJobsPage />} />
+          <Route path="/admin/stats" element={<AdminStatsPage />} />
 
           {/* Staff Routes */}
           <Route
