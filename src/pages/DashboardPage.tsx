@@ -169,6 +169,14 @@ const DashboardPage: React.FC = () => {
                   보호자 승인
                 </button>
                 <button
+                  onClick={() => navigate('/admin/photo-jobs')}
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  title="운영자 — 사진 처리 큐 모니터링"
+                >
+                  <Settings size={16} />
+                  사진 처리
+                </button>
+                <button
                   onClick={() => navigate('/admin/legal-settings')}
                   className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
                   title="운영자 — 회사 정보 / 약관 본문 편집"
