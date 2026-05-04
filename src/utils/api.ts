@@ -402,6 +402,16 @@ class ApiClient {
   ) {
     return this.instance.patch(`/admin/facilities/${facilityId}`, body);
   }
+
+  // T-146
+  public listAdminGuardians(params?: {
+    facility_id?: string;
+    state?: 'pending' | 'approved' | 'rejected';
+    page?: number;
+    size?: number;
+  }) {
+    return this.instance.get('/admin/guardians', { params });
+  }
 }
 
 export const apiClient = new ApiClient();

@@ -161,6 +161,14 @@ const DashboardPage: React.FC = () => {
                   시설 관리
                 </button>
                 <button
+                  onClick={() => navigate('/admin/guardians')}
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  title="운영자 — 보호자 승인 현황 (전체 시설 across)"
+                >
+                  <Settings size={16} />
+                  보호자 승인
+                </button>
+                <button
                   onClick={() => navigate('/admin/legal-settings')}
                   className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
                   title="운영자 — 회사 정보 / 약관 본문 편집"
