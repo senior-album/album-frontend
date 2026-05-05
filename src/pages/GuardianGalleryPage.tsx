@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/api';
 import OtpVerificationModal from '../components/OtpVerificationModal';
 import FacilityPicker, { FacilitySearchResult } from '../components/FacilityPicker';
+import PhotoLightbox from '../components/PhotoLightbox';
 
 interface InvitationItem {
   id: string;
@@ -82,6 +83,9 @@ const GuardianGalleryPage: React.FC = () => {
   const [connectMessage, setConnectMessage] = useState('');
   const [connectingFacility, setConnectingFacility] = useState(false);
   const [showOtpModal, setShowOtpModal] = useState(false);
+
+  // 라이트박스
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -592,7 +596,8 @@ const GuardianGalleryPage: React.FC = () => {
                           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
                             {groupPhotos.map((photo) => (
                               <div key={photo.id}
-                                className="group relative bg-white rounded-xl overflow-hidden shadow-soft hover:shadow-soft-lg transition transform hover:scale-105"
+                                onClick={() => setLightboxIndex(sortedPhotos.indexOf(photo))}
+                                className="group relative bg-white rounded-xl overflow-hidden shadow-soft hover:shadow-soft-lg transition transform hover:scale-105 cursor-pointer"
                               >
                                 <div className="aspect-square bg-gray-200 overflow-hidden relative">
                                   <img
@@ -605,13 +610,16 @@ const GuardianGalleryPage: React.FC = () => {
                                   />
                                   <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition flex items-center justify-center gap-2">
                                     <button
-                                      onClick={() => toggleFavorite(photo.id)}
+                                      onClick={(e) => { e.stopPropagation(); toggleFavorite(photo.id); }}
                                       className="opacity-0 group-hover:opacity-100 transition bg-white rounded-full p-2 hover:bg-red-50"
                                     >
                                       <Heart size={18}
                                         className={favorites.has(photo.id) ? 'text-red-500 fill-red-500' : 'text-gray-600'} />
                                     </button>
-                                    <button className="opacity-0 group-hover:opacity-100 transition bg-white rounded-full p-2 hover:bg-blue-50">
+                                    <button
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="opacity-0 group-hover:opacity-100 transition bg-white rounded-full p-2 hover:bg-blue-50"
+                                    >
                                       <Share2 size={18} className="text-blue-600" />
                                     </button>
                                   </div>
@@ -665,6 +673,13 @@ const GuardianGalleryPage: React.FC = () => {
           await submitConnectRequest();
         }}
         onClose={() => setShowOtpModal(false)}
+      />
+
+      <PhotoLightbox
+        photos={sortedPhotos}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onIndexChange={setLightboxIndex}
       />
     </div>
   );
