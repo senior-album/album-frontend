@@ -200,8 +200,13 @@ const GuardianGalleryPage: React.FC = () => {
 
   const handleConnectFacility = async () => {
     if (!connectFacility) return;
-    // 요청 전에 OTP 인증 모달 먼저 — 서버도 이중 체크하지만 UX 상 선행 검증
-    setShowOtpModal(true);
+    // 이미 인증된 phone 이 있으면 바로 연결 요청. 서버가 1년 만료 등 이유로 거부하면
+    // submitConnectRequest 의 fallback 이 OTP 모달을 띄움.
+    if (user?.phone) {
+      await submitConnectRequest();
+    } else {
+      setShowOtpModal(true);
+    }
   };
 
   const toggleFavorite = (photoId: string) => {
