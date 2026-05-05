@@ -29,6 +29,8 @@ const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, o
   const [loaded, setLoaded] = useState(false);
 
   const dragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
+  // 휠 한 번 굴림에 한 사진씩만 넘어가도록 throttle (트랙패드는 이벤트가 수십 번 폭발)
+  const lastWheelRef = useRef(0);
 
   const resetView = useCallback(() => {
     setZoom(1);
@@ -50,6 +52,15 @@ const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, o
     if (index === null) return;
     if (index < photos.length - 1) onIndexChange(index + 1);
   }, [index, onIndexChange, photos.length]);
+
+  const onWheel = useCallback((e: React.WheelEvent) => {
+    const now = Date.now();
+    if (now - lastWheelRef.current < 250) return;
+    if (Math.abs(e.deltaY) < 5) return;
+    lastWheelRef.current = now;
+    if (e.deltaY > 0) goNext();
+    else goPrev();
+  }, [goNext, goPrev]);
 
   const zoomIn = useCallback(() => setZoom((z) => Math.min(ZOOM_MAX, z * ZOOM_STEP)), []);
   const zoomOut = useCallback(() => {
@@ -123,6 +134,7 @@ const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, o
     <div
       className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center select-none"
       onClick={onClose}
+      onWheel={onWheel}
       role="dialog"
       aria-modal="true"
       aria-label="사진 확대보기"
@@ -240,7 +252,7 @@ const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, o
         className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white text-xs opacity-50 hidden sm:block"
         onClick={(e) => e.stopPropagation()}
       >
-        ← → 이동 · + − 확대/축소 · 0 원래크기 · ESC 닫기
+        ← → · 휠 이동 · + − 확대/축소 · 0 원래크기 · ESC 닫기
       </div>
     </div>
   );
