@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { Plus, Edit2, Camera, Loader2, UserPlus, Phone, Trash2, CheckCircle, XCircle, Image, Upload, Download, FileSpreadsheet, X } from 'lucide-react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { Plus, Edit2, Camera, Loader2, UserPlus, Phone, Trash2, CheckCircle, XCircle, Image, Upload, Download, FileSpreadsheet, X, ClipboardList } from 'lucide-react';
 import Layout from '../components/Layout';
 import { apiClient } from '../utils/api';
 import { Resident } from '../types';
@@ -20,6 +20,7 @@ interface FaceInfo {
 }
 
 const ResidentsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const filterParam = searchParams.get('filter');
   const initialFilter: ResidentFilter =
@@ -470,8 +471,16 @@ const ResidentsPage: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-sm flex gap-2">
                         <button
+                          onClick={() => navigate(`/residents/${resident.id}/wellness-logs`)}
+                          className="text-purple-600 hover:text-purple-800 transition"
+                          title="안부 일지"
+                        >
+                          <ClipboardList size={18} />
+                        </button>
+                        <button
                           onClick={() => handleEditResident(resident)}
                           className="text-blue-600 hover:text-blue-800 transition"
+                          title="입소자 정보 수정"
                         >
                           <Edit2 size={18} />
                         </button>
