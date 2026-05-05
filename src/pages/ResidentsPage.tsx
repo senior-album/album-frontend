@@ -49,12 +49,24 @@ const ResidentsPage: React.FC = () => {
   const [deletingFaceId, setDeletingFaceId] = useState<string | null>(null);
 
   // 보호자 초대 폼
-  const [inviteContactType, setInviteContactType] = useState<'phone' | 'email'>('phone');
+  // T-149: in_app 채널 추가 — 가입 회원 초대 (회원 검색 → 인앱 알림)
+  const [inviteContactType, setInviteContactType] = useState<'phone' | 'email' | 'in_app'>('phone');
   const [invitePhone, setInvitePhone] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteRelationship, setInviteRelationship] = useState('');
   const [inviteMessage, setInviteMessage] = useState('');
   const [inviteSending, setInviteSending] = useState(false);
+  // 가입 회원 검색 상태
+  const [inviteSearchQuery, setInviteSearchQuery] = useState('');
+  const [inviteSearching, setInviteSearching] = useState(false);
+  const [inviteSearchResult, setInviteSearchResult] = useState<{
+    id: string;
+    name_masked: string;
+    phone_masked: string | null;
+    email_masked: string | null;
+  } | null>(null);
+  const [inviteSearchError, setInviteSearchError] = useState<string | null>(null);
+  const [inviteSelectedUserId, setInviteSelectedUserId] = useState<string | null>(null);
 
   // T-030: CSV 일괄 import
   const [showCsvModal, setShowCsvModal] = useState(false);
@@ -807,21 +819,41 @@ const ResidentsPage: React.FC = () => {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
-                const contactVal = inviteContactType === 'phone' ? invitePhone.trim() : inviteEmail.trim();
-                if (!contactVal) { alert(inviteContactType === 'phone' ? '전화번호를 입력해주세요.' : '이메일을 입력해주세요.'); return; }
+                // T-149: 채널별 검증 + payload 구성
+                if (inviteContactType === 'phone') {
+                  if (!invitePhone.trim()) { alert('전화번호를 입력해주세요.'); return; }
+                } else if (inviteContactType === 'email') {
+                  if (!inviteEmail.trim()) { alert('이메일을 입력해주세요.'); return; }
+                } else {
+                  if (!inviteSelectedUserId) { alert('초대할 회원을 검색·선택해주세요.'); return; }
+                }
                 setInviteSending(true);
                 try {
                   await apiClient.createInvitation({
                     resident_id: selectedResident.id,
+                    invite_type: inviteContactType === 'in_app' ? 'in_app' : 'sms',
                     phone: inviteContactType === 'phone' ? invitePhone.trim() : undefined,
                     email: inviteContactType === 'email' ? inviteEmail.trim() : undefined,
+                    invitee_user_id: inviteContactType === 'in_app' ? inviteSelectedUserId! : undefined,
                     relationship_type: inviteRelationship || undefined,
                     message: inviteMessage || undefined,
                   });
-                  alert(`${contactVal}로 초대를 보냈습니다.\n보호자가 가입 후 초대를 수락하면 사진을 열람할 수 있습니다.`);
+                  const target = inviteContactType === 'phone'
+                    ? invitePhone.trim()
+                    : inviteContactType === 'email'
+                      ? inviteEmail.trim()
+                      : (inviteSearchResult?.name_masked ?? '회원');
+                  const tail = inviteContactType === 'in_app'
+                    ? '회원이 알림을 확인하고 수락하면 즉시 연결됩니다.'
+                    : '보호자가 가입 후 초대를 수락하면 사진을 열람할 수 있습니다.';
+                  alert(`${target}로 초대를 보냈습니다.\n${tail}`);
                   setShowInviteModal(false);
                   setInvitePhone('');
                   setInviteEmail('');
+                  setInviteSearchQuery('');
+                  setInviteSearchResult(null);
+                  setInviteSelectedUserId(null);
+                  setInviteSearchError(null);
                 } catch (err: any) {
                   alert(err.response?.data?.detail || '초대에 실패했습니다.');
                 } finally {
@@ -833,52 +865,141 @@ const ResidentsPage: React.FC = () => {
               {/* 초대 방식 선택 */}
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">초대 방식</label>
-                <div className="flex gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <button type="button"
                     onClick={() => setInviteContactType('phone')}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${inviteContactType === 'phone' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
-                    전화번호
+                    className={`py-2 rounded-lg text-sm font-medium transition ${inviteContactType === 'phone' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                    문자메시지
                   </button>
                   <button type="button"
                     onClick={() => setInviteContactType('email')}
-                    className={`flex-1 py-2 rounded-lg text-sm font-medium transition ${inviteContactType === 'email' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                    className={`py-2 rounded-lg text-sm font-medium transition ${inviteContactType === 'email' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
                     이메일
+                  </button>
+                  <button type="button"
+                    onClick={() => setInviteContactType('in_app')}
+                    className={`py-2 rounded-lg text-sm font-medium transition ${inviteContactType === 'in_app' ? 'bg-primary text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}>
+                    가입 회원 초대
                   </button>
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-gray-900 mb-2">
-                  {inviteContactType === 'phone' ? '보호자 전화번호 *' : '보호자 이메일 *'}
-                </label>
-                <div className="relative">
-                  <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
-                  {inviteContactType === 'phone' ? (
+              {inviteContactType === 'in_app' ? (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    회원 검색 *
+                  </label>
+                  <div className="flex gap-2">
                     <input
-                      type="tel"
-                      value={invitePhone}
-                      onChange={(e) => setInvitePhone(e.target.value)}
-                      placeholder="010-1234-5678"
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
+                      type="text"
+                      value={inviteSearchQuery}
+                      onChange={(e) => {
+                        setInviteSearchQuery(e.target.value);
+                        // 검색어가 바뀌면 이전 결과/선택 무효화
+                        if (inviteSelectedUserId || inviteSearchResult) {
+                          setInviteSelectedUserId(null);
+                          setInviteSearchResult(null);
+                        }
+                        if (inviteSearchError) setInviteSearchError(null);
+                      }}
+                      placeholder="전화번호 또는 이메일 (정확히 입력)"
+                      className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                     />
-                  ) : (
-                    <input
-                      type="email"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      placeholder="guardian@example.com"
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-                      required
-                    />
+                    <button
+                      type="button"
+                      disabled={!inviteSearchQuery.trim() || inviteSearching}
+                      onClick={async () => {
+                        setInviteSearching(true);
+                        setInviteSearchError(null);
+                        setInviteSearchResult(null);
+                        setInviteSelectedUserId(null);
+                        try {
+                          const resp = await apiClient.searchUser(inviteSearchQuery.trim());
+                          if (resp.data) {
+                            setInviteSearchResult(resp.data);
+                          } else {
+                            setInviteSearchError('일치하는 회원이 없습니다. 정확한 전화번호 또는 이메일을 입력해주세요.');
+                          }
+                        } catch (err: any) {
+                          setInviteSearchError(err.response?.data?.detail || '검색에 실패했습니다.');
+                        } finally {
+                          setInviteSearching(false);
+                        }
+                      }}
+                      className="px-4 py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary/90 transition disabled:opacity-50"
+                    >
+                      {inviteSearching ? '검색 중...' : '검색'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    개인정보 보호를 위해 전화번호 또는 이메일이 정확히 일치할 때만 검색됩니다.
+                  </p>
+
+                  {inviteSearchError && (
+                    <div className="mt-3 p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm text-amber-800">
+                      {inviteSearchError}
+                    </div>
+                  )}
+
+                  {inviteSearchResult && (
+                    <button
+                      type="button"
+                      onClick={() => setInviteSelectedUserId(inviteSearchResult.id)}
+                      className={`mt-3 w-full text-left p-3 rounded-lg border transition ${
+                        inviteSelectedUserId === inviteSearchResult.id
+                          ? 'border-primary bg-primary/5 ring-2 ring-primary'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="font-semibold text-gray-900">{inviteSearchResult.name_masked}</div>
+                      <div className="text-xs text-gray-500 mt-0.5 space-x-2">
+                        {inviteSearchResult.phone_masked && (
+                          <span>📞 {inviteSearchResult.phone_masked}</span>
+                        )}
+                        {inviteSearchResult.email_masked && (
+                          <span>✉️ {inviteSearchResult.email_masked}</span>
+                        )}
+                      </div>
+                      <div className="text-xs mt-1.5 text-gray-400">
+                        {inviteSelectedUserId === inviteSearchResult.id ? '✓ 선택됨' : '눌러서 선택'}
+                      </div>
+                    </button>
                   )}
                 </div>
-                <p className="text-xs text-gray-400 mt-1">
-                  {inviteContactType === 'phone'
-                    ? '보호자가 가입 시 사용할 전화번호를 입력하세요'
-                    : '보호자가 가입 시 사용할 이메일을 입력하세요'}
-                </p>
-              </div>
+              ) : (
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">
+                    {inviteContactType === 'phone' ? '보호자 전화번호 *' : '보호자 이메일 *'}
+                  </label>
+                  <div className="relative">
+                    <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+                    {inviteContactType === 'phone' ? (
+                      <input
+                        type="tel"
+                        value={invitePhone}
+                        onChange={(e) => setInvitePhone(e.target.value)}
+                        placeholder="010-1234-5678"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    ) : (
+                      <input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        placeholder="guardian@example.com"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                        required
+                      />
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {inviteContactType === 'phone'
+                      ? '보호자가 가입 시 사용할 전화번호를 입력하세요'
+                      : '보호자가 가입 시 사용할 이메일을 입력하세요'}
+                  </p>
+                </div>
+              )}
 
               <div>
                 <label className="block text-sm font-semibold text-gray-900 mb-2">관계</label>
