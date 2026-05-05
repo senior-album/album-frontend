@@ -310,12 +310,24 @@ class ApiClient {
 
   public createInvitation(data: {
     resident_id: string;
+    invite_type?: 'sms' | 'in_app';
     phone?: string;
     email?: string;
+    invitee_user_id?: string;
     relationship_type?: string;
     message?: string;
   }) {
     return this.instance.post('/invitations', data);
+  }
+
+  // T-149: 가입 회원 초대용 — 전화번호/이메일 정확 일치만 매칭, 결과는 마스킹.
+  public searchUser(query: string) {
+    return this.instance.get<{
+      id: string;
+      name_masked: string;
+      phone_masked: string | null;
+      email_masked: string | null;
+    } | null>('/users/search', { params: { query } });
   }
 
   public requestFacilityConnection(data: {
