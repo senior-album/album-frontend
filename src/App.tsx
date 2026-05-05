@@ -24,6 +24,7 @@ import AdminPhotoJobsPage from './pages/AdminPhotoJobsPage';
 import AdminStatsPage from './pages/AdminStatsPage';
 import StaffWellnessLogsPage from './pages/StaffWellnessLogsPage';
 import GuardianWellnessLogsPage from './pages/GuardianWellnessLogsPage';
+import FacilityPermissionsPage from './pages/FacilityPermissionsPage';
 
 const App: React.FC = () => {
   return (
@@ -85,6 +86,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute requiredRole="staff">
                 <StaffWellnessLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/facility/permissions"
+            element={
+              <ProtectedRoute requiredRole="staff">
+                <FacilityPermissionsPage />
               </ProtectedRoute>
             }
           />
