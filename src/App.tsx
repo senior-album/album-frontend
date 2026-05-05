@@ -22,6 +22,8 @@ import AdminFacilitiesPage from './pages/AdminFacilitiesPage';
 import AdminGuardiansPage from './pages/AdminGuardiansPage';
 import AdminPhotoJobsPage from './pages/AdminPhotoJobsPage';
 import AdminStatsPage from './pages/AdminStatsPage';
+import StaffWellnessLogsPage from './pages/StaffWellnessLogsPage';
+import GuardianWellnessLogsPage from './pages/GuardianWellnessLogsPage';
 
 const App: React.FC = () => {
   return (
@@ -78,6 +80,14 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/residents/:residentId/wellness-logs"
+            element={
+              <ProtectedRoute requiredRole="staff">
+                <StaffWellnessLogsPage />
+              </ProtectedRoute>
+            }
+          />
 
           {/* Guardian Routes */}
           <Route
@@ -93,6 +103,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute requiredRole="guardian">
                 <GuardianMyPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/guardian/residents/:residentId/wellness-logs"
+            element={
+              <ProtectedRoute requiredRole="guardian">
+                <GuardianWellnessLogsPage />
               </ProtectedRoute>
             }
           />

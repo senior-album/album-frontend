@@ -449,6 +449,33 @@ class ApiClient {
   public getAdminStats() {
     return this.instance.get('/admin/stats');
   }
+
+  // ==================== Wellness Logs (T-241) ====================
+
+  public listWellnessLogs(
+    residentId: string,
+    params?: { start_date?: string; end_date?: string },
+  ) {
+    return this.instance.get(`/residents/${residentId}/wellness-logs`, { params });
+  }
+
+  public getWellnessLog(residentId: string, logDate: string) {
+    return this.instance.get(`/residents/${residentId}/wellness-logs/${logDate}`);
+  }
+
+  public upsertWellnessLog(
+    residentId: string,
+    logDate: string,
+    body: {
+      mobility_status?: string | null;
+      meal_breakfast?: string | null;
+      meal_lunch?: string | null;
+      meal_dinner?: string | null;
+      notes?: string | null;
+    },
+  ) {
+    return this.instance.put(`/residents/${residentId}/wellness-logs/${logDate}`, body);
+  }
 }
 
 export const apiClient = new ApiClient();

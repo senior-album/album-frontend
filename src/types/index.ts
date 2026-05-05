@@ -70,6 +70,32 @@ export interface AuthResponse {
   facility?: Facility;
 }
 
+// T-241: 입소자 안부 일지
+export type MobilityStatus = 'independent' | 'walker' | 'wheelchair' | 'bedridden';
+export type MealStatus = 'full' | 'partial' | 'refused' | 'skipped';
+
+export interface WellnessLog {
+  id: string;
+  resident_id: string;
+  log_date: string; // ISO date (YYYY-MM-DD)
+  mobility_status: MobilityStatus | null;
+  meal_breakfast: MealStatus | null;
+  meal_lunch: MealStatus | null;
+  meal_dinner: MealStatus | null;
+  notes: string | null;
+  created_by: string;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface WellnessLogUpsert {
+  mobility_status?: MobilityStatus | null;
+  meal_breakfast?: MealStatus | null;
+  meal_lunch?: MealStatus | null;
+  meal_dinner?: MealStatus | null;
+  notes?: string | null;
+}
+
 export interface StatsData {
   totalPhotos: number;
   photosToday: number;

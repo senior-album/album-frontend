@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Heart, Share2, Loader2, CheckCircle, Mail, Building2, Users, Phone, Search } from 'lucide-react';
+import { Heart, Share2, Loader2, CheckCircle, Mail, Building2, Users, Phone, Search, ClipboardList } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/api';
@@ -499,30 +499,38 @@ const GuardianGalleryPage: React.FC = () => {
                         </div>
                         <div className="space-y-2">
                           {fg.residents.map((r) => (
-                            <button
-                              key={r.id}
-                              onClick={() => {
-                                setSelectedFacility(fg.facility_id);
-                                setSelectedResident(r.id);
-                              }}
-                              className={`w-full text-left px-3 py-2 rounded-lg transition text-sm ${
-                                selectedResident === r.id
-                                  ? 'bg-primary text-white'
-                                  : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
-                              }`}
-                            >
-                              <span className="font-medium">{r.name}</span>
-                              {r.relationship_type && (
-                                <span className={`ml-2 text-xs ${selectedResident === r.id ? 'text-blue-100' : 'text-gray-400'}`}>
-                                  ({r.relationship_type})
-                                </span>
-                              )}
-                              {r.room_number && (
-                                <span className={`ml-1 text-xs ${selectedResident === r.id ? 'text-blue-100' : 'text-gray-400'}`}>
-                                  · {r.room_number}
-                                </span>
-                              )}
-                            </button>
+                            <div key={r.id} className="flex items-stretch gap-1">
+                              <button
+                                onClick={() => {
+                                  setSelectedFacility(fg.facility_id);
+                                  setSelectedResident(r.id);
+                                }}
+                                className={`flex-1 text-left px-3 py-2 rounded-lg transition text-sm ${
+                                  selectedResident === r.id
+                                    ? 'bg-primary text-white'
+                                    : 'bg-gray-50 hover:bg-gray-100 text-gray-700'
+                                }`}
+                              >
+                                <span className="font-medium">{r.name}</span>
+                                {r.relationship_type && (
+                                  <span className={`ml-2 text-xs ${selectedResident === r.id ? 'text-blue-100' : 'text-gray-400'}`}>
+                                    ({r.relationship_type})
+                                  </span>
+                                )}
+                                {r.room_number && (
+                                  <span className={`ml-1 text-xs ${selectedResident === r.id ? 'text-blue-100' : 'text-gray-400'}`}>
+                                    · {r.room_number}
+                                  </span>
+                                )}
+                              </button>
+                              <button
+                                onClick={() => navigate(`/guardian/residents/${r.id}/wellness-logs`)}
+                                title={`${r.name}님 안부 일지 보기`}
+                                className="px-2 rounded-lg bg-guardian-cream hover:bg-guardian-brown hover:text-white text-guardian-brown transition flex items-center justify-center"
+                              >
+                                <ClipboardList size={16} />
+                              </button>
+                            </div>
                           ))}
                         </div>
                       </div>
