@@ -130,3 +130,21 @@ export interface MyPermissions {
   permission_keys: string[];
   has_all_via_role: boolean;
 }
+
+// T-143: 시설 사용 지표 트렌드
+export type StatsRange = '3m' | '6m' | '12m';
+
+export interface StatsTrendBucket {
+  month: string; // YYYY-MM
+  photos_uploaded: number;
+  photos_classified: number;
+  matching_rate: number; // 0..100, 1 decimal
+  active_guardians: number;
+  photos_unprocessed_eom: number;
+}
+
+export interface StatsTrendsResponse {
+  facility_id: string;
+  range: StatsRange;
+  items: StatsTrendBucket[];
+}
