@@ -146,6 +146,12 @@ class ApiClient {
     return this.instance.post('/auth/phone/otp/verify', { phone, code });
   }
 
+  // ==================== Support ====================
+
+  public reportPhoneClaim(phone: string, note?: string) {
+    return this.instance.post('/support/phone-claim', { phone, note: note || '' });
+  }
+
   // ==================== Facilities ====================
 
   public getFacility(id: string) {
