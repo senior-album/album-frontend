@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Search, Building2 } from 'lucide-react';
+import { ArrowLeft, Plus, Search, Building2, Copy, Check, CheckCircle2, Circle } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { apiClient } from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 
 /**
  * T-145 — 운영자 어드민 / 전체 시설 관리.
+ * T-141 — 신규 시설 생성 시 온보딩 위저드 (코드 / 가입 URL / QR / 다음 단계 안내).
  *
  * 운영자(`is_operator`) 가 아니면 즉시 /login 으로 리다이렉트.
  * 시설 목록 + 직원/입소자/사진 카운트 + 생성·수정 모달.
@@ -57,6 +59,23 @@ const AdminFacilitiesPage: React.FC = () => {
   const [draft, setDraft] = useState<DraftFacility | null>(null); // null = 모달 닫힘
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // T-141: 시설 생성 직후의 결과. set 되면 모달이 위저드 Step 2 (안내) 로 전환.
+  const [created, setCreated] = useState<AdminFacility | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+
+  const copyToClipboard = async (key: string, text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedKey(key);
+      setTimeout(() => setCopiedKey((k) => (k === key ? null : k)), 1500);
+    } catch {
+      // clipboard API 실패는 silent — 사용자가 수동 복사 가능
+    }
+  };
+
+  const signupUrl = (code: string) =>
+    `${window.location.origin}/register?facility_code=${encodeURIComponent(code)}`;
 
   const totalPages = useMemo(() => Math.max(1, Math.ceil(total / PAGE_SIZE)), [total]);
 
@@ -118,20 +137,29 @@ const AdminFacilitiesPage: React.FC = () => {
           address: draft.address.trim(),
           phone: draft.phone.trim(),
         });
+        setDraft(null);
+        reload();
       } else {
-        await apiClient.createAdminFacility({
+        const res = await apiClient.createAdminFacility({
           name: draft.name.trim(),
           address: draft.address.trim(),
           phone: draft.phone.trim(),
         });
+        // 위저드 Step 2 — 코드/URL/QR 안내. 모달은 사용자가 "완료" 누를 때 닫음.
+        setCreated(res.data as AdminFacility);
+        reload();
       }
-      setDraft(null);
-      reload();
     } catch (err: any) {
       setError(err?.response?.data?.detail || '저장에 실패했습니다.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const closeWizard = () => {
+    setDraft(null);
+    setCreated(null);
+    setError(null);
   };
 
   return (
@@ -252,64 +280,158 @@ const AdminFacilitiesPage: React.FC = () => {
       {draft && (
         <div
           className="fixed inset-0 bg-black/40 flex items-center justify-center p-4 z-50"
-          onClick={() => !saving && setDraft(null)}
+          onClick={() => {
+            // 위저드 Step 2 (created) 진행 중엔 backdrop 클릭으로 안 닫힘 — 운영자가 명시적 "완료" 눌러야 함.
+            if (saving || created) return;
+            setDraft(null);
+          }}
         >
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-5" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
-              <Building2 size={18} />
-              {draft.id ? '시설 수정' : '시설 추가'}
-            </h3>
+          <div
+            className={`bg-white rounded-lg shadow-xl w-full p-5 ${created ? 'max-w-lg' : 'max-w-md'}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {created ? (
+              // ===== T-141 위저드 Step 2 — 시설 생성 직후 안내 =====
+              <>
+                <h3 className="text-lg font-bold text-gray-900 mb-1 flex items-center gap-2">
+                  <CheckCircle2 size={20} className="text-green-600" />
+                  시설 등록 완료
+                </h3>
+                <p className="text-xs text-gray-500 mb-4">
+                  <span className="font-medium text-gray-700">{created.name}</span> 의 가입 코드가 발급되었습니다. 시설장에게 아래 정보를 전달해 주세요.
+                </p>
 
-            {draft.code && (
-              <p className="text-xs text-gray-500 mb-3">
-                코드 <code className="font-mono text-blue-700">{draft.code}</code>
-                <span className="text-gray-400 ml-2">(코드는 변경 불가)</span>
-              </p>
+                <div className="space-y-3">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">시설 코드</div>
+                    <div className="flex items-center gap-2">
+                      <code className="font-mono text-lg font-semibold text-blue-700 flex-1">{created.code}</code>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('code', created.code)}
+                        className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded"
+                      >
+                        {copiedKey === 'code' ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+                        {copiedKey === 'code' ? '복사됨' : '복사'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <div className="text-[10px] uppercase tracking-wide text-gray-500 mb-1">가입 URL</div>
+                    <div className="flex items-center gap-2">
+                      <code className="font-mono text-xs text-gray-800 flex-1 break-all">{signupUrl(created.code)}</code>
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard('url', signupUrl(created.code))}
+                        className="inline-flex items-center gap-1 text-xs text-gray-600 hover:text-gray-900 px-2 py-1 border border-gray-300 rounded shrink-0"
+                      >
+                        {copiedKey === 'url' ? <Check size={12} className="text-green-600" /> : <Copy size={12} />}
+                        {copiedKey === 'url' ? '복사됨' : '복사'}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-gray-200 rounded-lg p-3 flex items-center justify-center">
+                    <div className="text-center">
+                      <QRCodeSVG value={signupUrl(created.code)} size={140} level="M" />
+                      <p className="text-[10px] text-gray-500 mt-2">QR 스캔 → 가입 페이지 이동</p>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-200 pt-3">
+                    <div className="text-xs font-semibold text-gray-700 mb-2">다음 단계</div>
+                    <ul className="space-y-1.5 text-xs">
+                      <li className="flex items-start gap-2 text-green-700">
+                        <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
+                        <span>시설 등록</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-gray-600">
+                        <Circle size={14} className="mt-0.5 shrink-0" />
+                        <span>시설장에게 코드와 가입 URL 전달 (이메일·메신저·인쇄)</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-gray-600">
+                        <Circle size={14} className="mt-0.5 shrink-0" />
+                        <span>시설장 회원가입 (가입 시 자동 승인 — 별도 운영자 작업 불필요)</span>
+                      </li>
+                      <li className="flex items-start gap-2 text-gray-600">
+                        <Circle size={14} className="mt-0.5 shrink-0" />
+                        <span>시설장이 직원 초대 / 입소자 등록 / 첫 사진 업로드 진행</span>
+                      </li>
+                    </ul>
+                  </div>
+                </div>
+
+                <div className="flex justify-end mt-5">
+                  <button
+                    type="button"
+                    onClick={closeWizard}
+                    className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:opacity-90"
+                  >
+                    완료
+                  </button>
+                </div>
+              </>
+            ) : (
+              // ===== Step 1 — 시설 정보 입력 (생성/수정 공용) =====
+              <>
+                <h3 className="text-lg font-bold text-gray-900 mb-3 flex items-center gap-2">
+                  <Building2 size={18} />
+                  {draft.id ? '시설 수정' : '시설 추가'}
+                </h3>
+
+                {draft.code && (
+                  <p className="text-xs text-gray-500 mb-3">
+                    코드 <code className="font-mono text-blue-700">{draft.code}</code>
+                    <span className="text-gray-400 ml-2">(코드는 변경 불가)</span>
+                  </p>
+                )}
+
+                {error && (
+                  <p className="bg-red-50 border border-red-200 text-red-700 text-xs rounded p-2 mb-3">{error}</p>
+                )}
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">이름 *</label>
+                    <input
+                      type="text"
+                      value={draft.name}
+                      onChange={(e) => setDraft({ ...draft, name: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">주소 *</label>
+                    <input
+                      type="text"
+                      value={draft.address}
+                      onChange={(e) => setDraft({ ...draft, address: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-700 mb-1">전화</label>
+                    <input
+                      type="text"
+                      value={draft.phone}
+                      onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
+                      placeholder="02-1234-5678"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 mt-5">
+                  <button type="button" disabled={saving} onClick={() => setDraft(null)} className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
+                    취소
+                  </button>
+                  <button type="button" disabled={saving} onClick={submitDraft} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:opacity-90 disabled:opacity-50">
+                    {saving ? '저장 중...' : draft.id ? '저장' : '생성'}
+                  </button>
+                </div>
+              </>
             )}
-
-            {error && (
-              <p className="bg-red-50 border border-red-200 text-red-700 text-xs rounded p-2 mb-3">{error}</p>
-            )}
-
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">이름 *</label>
-                <input
-                  type="text"
-                  value={draft.name}
-                  onChange={(e) => setDraft({ ...draft, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">주소 *</label>
-                <input
-                  type="text"
-                  value={draft.address}
-                  onChange={(e) => setDraft({ ...draft, address: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1">전화</label>
-                <input
-                  type="text"
-                  value={draft.phone}
-                  onChange={(e) => setDraft({ ...draft, phone: e.target.value })}
-                  placeholder="02-1234-5678"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 mt-5">
-              <button type="button" disabled={saving} onClick={() => setDraft(null)} className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 rounded-lg">
-                취소
-              </button>
-              <button type="button" disabled={saving} onClick={submitDraft} className="px-4 py-2 text-sm bg-primary text-white rounded-lg hover:opacity-90 disabled:opacity-50">
-                {saving ? '저장 중...' : draft.id ? '저장' : '생성'}
-              </button>
-            </div>
           </div>
         </div>
       )}
