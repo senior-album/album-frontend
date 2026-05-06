@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Home, Users, Image, Shield, Menu, X, KeyRound, BarChart3 } from 'lucide-react';
+import { LogOut, Home, Users, Image, Shield, Menu, X, KeyRound, BarChart3, UserCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFacilityPermission } from '../hooks/useFacilityPermission';
 import { PERMISSION_KEYS } from '../types';
@@ -35,6 +35,10 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
     // T-143: 시설장 / 운영자 / 위임 받은 직원
     ...(hasPermission(PERMISSION_KEYS.FACILITY_STATS_VIEW)
       ? [{ path: '/facility/stats', icon: BarChart3, label: '시설 통계' }]
+      : []),
+    // T-056: 시설장 또는 facility:staff:approve 위임받은 직원
+    ...(hasPermission(PERMISSION_KEYS.FACILITY_STAFF_APPROVE)
+      ? [{ path: '/facility/staff-approvals', icon: UserCheck, label: '직원 승인' }]
       : []),
     // T-150: 시설장만 — 직원 메뉴 권한 위임
     ...(user?.is_admin

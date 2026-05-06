@@ -171,6 +171,9 @@ const RegisterPage: React.FC = () => {
 
       if (userData.role === 'guardian') {
         navigate('/guardian');
+      } else if (userData.is_staff_approved === false && !userData.is_admin && !userData.is_operator) {
+        // T-056: 미승인 staff 는 승인 대기 페이지로
+        navigate('/pending-approval');
       } else {
         navigate('/dashboard');
       }

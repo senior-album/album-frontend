@@ -511,6 +511,22 @@ class ApiClient {
       params: { range },
     });
   }
+
+  // ==================== Facility Staff Approvals (T-056) ====================
+
+  public listPendingStaff() {
+    return this.instance.get('/facility-approvals/pending');
+  }
+
+  public approveStaff(userId: string) {
+    return this.instance.post(`/facility-approvals/${userId}/approve`);
+  }
+
+  public rejectStaff(userId: string, reason?: string) {
+    return this.instance.post(`/facility-approvals/${userId}/reject`, {
+      reason: reason || null,
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

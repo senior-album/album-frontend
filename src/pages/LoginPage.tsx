@@ -41,7 +41,12 @@ const LoginPage: React.FC = () => {
       setUser(user);
 
       if (user.role === 'staff') {
-        navigate('/dashboard');
+        // T-056: 미승인 staff (시설장·운영자 제외) 는 승인 대기 페이지로
+        if (user.is_staff_approved === false && !user.is_admin && !user.is_operator) {
+          navigate('/pending-approval');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
         navigate('/guardian');
       }
