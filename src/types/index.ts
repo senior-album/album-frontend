@@ -105,3 +105,28 @@ export interface StatsData {
   facilityName: string;
   facilityCode: string;
 }
+
+// T-150: 시설 직원 메뉴 권한 위임
+export const PERMISSION_KEYS = {
+  FACILITY_STATS_VIEW: 'facility:stats:view',
+} as const;
+export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
+
+export interface PermissionKeyOut {
+  key: string;
+  description: string;
+}
+
+export interface StaffPermissionRow {
+  user_id: string;
+  name: string;
+  email: string;
+  is_admin: boolean;
+  permission_keys: string[];
+  has_all_via_role: boolean;
+}
+
+export interface MyPermissions {
+  permission_keys: string[];
+  has_all_via_role: boolean;
+}

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Home, Users, Image, Shield, Menu, X } from 'lucide-react';
+import { LogOut, Home, Users, Image, Shield, Menu, X, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 
@@ -29,6 +29,10 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
     { path: '/residents', icon: Users, label: '입소자 관리' },
     { path: '/photos', icon: Image, label: '사진 관리' },
     { path: '/guardian-manage', icon: Shield, label: '보호자 관리' },
+    // T-150: 시설장만 — 직원 메뉴 권한 위임
+    ...(user?.is_admin
+      ? [{ path: '/facility/permissions', icon: KeyRound, label: '메뉴 권한 위임' }]
+      : []),
   ];
 
   if (isSidebarHidden) {

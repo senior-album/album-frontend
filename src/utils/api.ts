@@ -476,6 +476,33 @@ class ApiClient {
   ) {
     return this.instance.put(`/residents/${residentId}/wellness-logs/${logDate}`, body);
   }
+
+  // ==================== Facility Permissions (T-150) ====================
+
+  public listFacilityPermissionKeys() {
+    return this.instance.get('/facility-permissions/keys');
+  }
+
+  public listFacilityStaffPermissions() {
+    return this.instance.get('/facility-permissions/staff');
+  }
+
+  public getMyFacilityPermissions() {
+    return this.instance.get('/facility-permissions/me');
+  }
+
+  public grantFacilityPermission(userId: string, permissionKey: string) {
+    return this.instance.post('/facility-permissions/grant', {
+      user_id: userId,
+      permission_key: permissionKey,
+    });
+  }
+
+  public revokeFacilityPermission(userId: string, permissionKey: string) {
+    return this.instance.delete(
+      `/facility-permissions/${userId}/${permissionKey}`,
+    );
+  }
 }
 
 export const apiClient = new ApiClient();
