@@ -11,6 +11,8 @@ export interface User {
   phone?: string;
   profile_image?: string;
   is_active?: boolean;
+  // T-056: register_staff 직후엔 false. 시설장 승인 후 true.
+  is_staff_approved?: boolean;
   created_at?: string;
 }
 
@@ -109,6 +111,7 @@ export interface StatsData {
 // T-150: 시설 직원 메뉴 권한 위임
 export const PERMISSION_KEYS = {
   FACILITY_STATS_VIEW: 'facility:stats:view',
+  FACILITY_STAFF_APPROVE: 'facility:staff:approve',
 } as const;
 export type PermissionKey = (typeof PERMISSION_KEYS)[keyof typeof PERMISSION_KEYS];
 
@@ -147,4 +150,23 @@ export interface StatsTrendsResponse {
   facility_id: string;
   range: StatsRange;
   items: StatsTrendBucket[];
+}
+
+// T-056: 직원 승인
+export interface PendingStaffRow {
+  user_id: string;
+  email: string;
+  name: string;
+  phone?: string | null;
+  created_at?: string | null;
+}
+
+export interface PendingStaffListResponse {
+  items: PendingStaffRow[];
+}
+
+export interface StaffApprovalActionResponse {
+  user_id: string;
+  is_staff_approved: boolean;
+  is_rejected: boolean;
 }

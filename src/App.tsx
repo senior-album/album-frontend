@@ -26,6 +26,8 @@ import StaffWellnessLogsPage from './pages/StaffWellnessLogsPage';
 import GuardianWellnessLogsPage from './pages/GuardianWellnessLogsPage';
 import FacilityPermissionsPage from './pages/FacilityPermissionsPage';
 import FacilityStatsTrendsPage from './pages/FacilityStatsTrendsPage';
+import PendingApprovalPage from './pages/PendingApprovalPage';
+import StaffApprovalsPage from './pages/StaffApprovalsPage';
 
 const App: React.FC = () => {
   return (
@@ -106,6 +108,16 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/facility/staff-approvals"
+            element={
+              <ProtectedRoute requiredRole="staff">
+                <StaffApprovalsPage />
+              </ProtectedRoute>
+            }
+          />
+          {/* T-056: 미승인 staff 가 강제 redirect 되는 랜딩 — 자체 가드 (ProtectedRoute 안 씀) */}
+          <Route path="/pending-approval" element={<PendingApprovalPage />} />
 
           {/* Guardian Routes */}
           <Route
