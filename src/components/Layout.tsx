@@ -1,7 +1,9 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Home, Users, Image, Shield, Menu, X, KeyRound } from 'lucide-react';
+import { LogOut, Home, Users, Image, Shield, Menu, X, KeyRound, BarChart3 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useFacilityPermission } from '../hooks/useFacilityPermission';
+import { PERMISSION_KEYS } from '../types';
 import { useState } from 'react';
 
 interface LayoutProps {
@@ -13,6 +15,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { has: hasPermission } = useFacilityPermission();
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleLogout = () => {
@@ -29,6 +32,10 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
     { path: '/residents', icon: Users, label: '입소자 관리' },
     { path: '/photos', icon: Image, label: '사진 관리' },
     { path: '/guardian-manage', icon: Shield, label: '보호자 관리' },
+    // T-143: 시설장 / 운영자 / 위임 받은 직원
+    ...(hasPermission(PERMISSION_KEYS.FACILITY_STATS_VIEW)
+      ? [{ path: '/facility/stats', icon: BarChart3, label: '시설 통계' }]
+      : []),
     // T-150: 시설장만 — 직원 메뉴 권한 위임
     ...(user?.is_admin
       ? [{ path: '/facility/permissions', icon: KeyRound, label: '메뉴 권한 위임' }]
