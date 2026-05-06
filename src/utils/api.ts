@@ -503,6 +503,14 @@ class ApiClient {
       `/facility-permissions/${userId}/${permissionKey}`,
     );
   }
+
+  // ==================== Facility Stats Trends (T-143) ====================
+
+  public getFacilityStatsTrends(facilityId: string, range: '3m' | '6m' | '12m' = '6m') {
+    return this.instance.get(`/facilities/${facilityId}/stats/trends`, {
+      params: { range },
+    });
+  }
 }
 
 export const apiClient = new ApiClient();
