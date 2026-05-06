@@ -260,9 +260,20 @@ const GuardianMyPage: React.FC = () => {
             <div className="space-y-4">
               {facilityGroups.map((fg) => (
                 <div key={fg.facility_id}>
-                  <div className="flex items-center gap-2 mb-2">
-                    <Building2 size={16} className="text-primary" />
-                    <span className="text-sm font-semibold text-gray-700">{fg.facility_name}</span>
+                  <div className="flex items-center justify-between gap-2 mb-2">
+                    <div className="flex items-center gap-2">
+                      <Building2 size={16} className="text-primary" />
+                      <span className="text-sm font-semibold text-gray-700">{fg.facility_name}</span>
+                    </div>
+                    {/* T-243: 이벤트 캘린더 진입 */}
+                    <button
+                      onClick={() =>
+                        navigate(`/guardian/events?facility_id=${fg.facility_id}`)
+                      }
+                      className="text-xs font-medium text-primary hover:text-blue-700 transition"
+                    >
+                      이벤트 캘린더 →
+                    </button>
                   </div>
                   <div className="space-y-2 ml-6">
                     {fg.residents.map((r) => (

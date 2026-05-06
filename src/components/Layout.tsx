@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Home, Users, Image, Shield, Menu, X, KeyRound, BarChart3, UserCheck } from 'lucide-react';
+import { LogOut, Home, Users, Image, Shield, Menu, X, KeyRound, BarChart3, UserCheck, Calendar } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFacilityPermission } from '../hooks/useFacilityPermission';
 import { PERMISSION_KEYS } from '../types';
@@ -32,6 +32,8 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
     { path: '/residents', icon: Users, label: '입소자 관리' },
     { path: '/photos', icon: Image, label: '사진 관리' },
     { path: '/guardian-manage', icon: Shield, label: '보호자 관리' },
+    // T-243: 이벤트 캘린더 — 모든 직원 노출 (별도 권한 게이트 없음, MVP).
+    { path: '/facility/events', icon: Calendar, label: '이벤트 캘린더' },
     // T-143: 시설장 / 운영자 / 위임 받은 직원
     ...(hasPermission(PERMISSION_KEYS.FACILITY_STATS_VIEW)
       ? [{ path: '/facility/stats', icon: BarChart3, label: '시설 통계' }]

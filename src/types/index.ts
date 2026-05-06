@@ -98,6 +98,36 @@ export interface WellnessLogUpsert {
   notes?: string | null;
 }
 
+// T-243: 이벤트 캘린더
+export type EventType = 'birthday' | 'outing' | 'other';
+
+export interface CalendarEvent {
+  id: string;
+  facility_id: string;
+  resident_id: string | null;
+  type: EventType;
+  title: string;
+  description: string | null;
+  start_at: string; // ISO datetime
+  end_at: string | null;
+  all_day: boolean;
+  created_by: string;
+  created_at: string;
+  updated_at: string | null;
+}
+
+export interface EventCreate {
+  type: EventType;
+  title: string;
+  description?: string | null;
+  start_at: string;
+  end_at?: string | null;
+  all_day: boolean;
+  resident_id?: string | null;
+}
+
+export type EventUpdate = Partial<EventCreate>;
+
 export interface StatsData {
   totalPhotos: number;
   photosToday: number;
