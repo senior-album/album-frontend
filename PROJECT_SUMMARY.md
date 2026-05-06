@@ -103,7 +103,7 @@ Senior Album은 요양원에서 촬영한 사진을 AI(InsightFace/ArcFace)로 �
 |--------|------|---------|
 | PostgreSQL | 메인 DB | 필수 (fallback 없음) |
 | Redis | Rate Limiting, 캐시 | 인메모리 dict fallback |
-| MinIO | 사진 저장 | 로컬 `./uploads` 디렉토리 |
+| MinIO | 사진 저장 | 필수 (fallback 없음) |
 | OpenSearch | 얼굴 벡터 검색 | 얼굴 검색 비활성화 |
 | InsightFace | 얼굴 인식 | 얼굴 인식 비활성화 |
 
