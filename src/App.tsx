@@ -24,6 +24,8 @@ import AdminPhotoJobsPage from './pages/AdminPhotoJobsPage';
 import AdminStatsPage from './pages/AdminStatsPage';
 import StaffWellnessLogsPage from './pages/StaffWellnessLogsPage';
 import GuardianWellnessLogsPage from './pages/GuardianWellnessLogsPage';
+import StaffEventsCalendarPage from './pages/StaffEventsCalendarPage';
+import GuardianEventsCalendarPage from './pages/GuardianEventsCalendarPage';
 import FacilityPermissionsPage from './pages/FacilityPermissionsPage';
 import FacilityStatsTrendsPage from './pages/FacilityStatsTrendsPage';
 import PendingApprovalPage from './pages/PendingApprovalPage';
@@ -116,6 +118,14 @@ const App: React.FC = () => {
               </ProtectedRoute>
             }
           />
+          <Route
+            path="/facility/events"
+            element={
+              <ProtectedRoute requiredRole="staff">
+                <StaffEventsCalendarPage />
+              </ProtectedRoute>
+            }
+          />
           {/* T-056: 미승인 staff 가 강제 redirect 되는 랜딩 — 자체 가드 (ProtectedRoute 안 씀) */}
           <Route path="/pending-approval" element={<PendingApprovalPage />} />
 
@@ -141,6 +151,14 @@ const App: React.FC = () => {
             element={
               <ProtectedRoute requiredRole="guardian">
                 <GuardianWellnessLogsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/guardian/events"
+            element={
+              <ProtectedRoute requiredRole="guardian">
+                <GuardianEventsCalendarPage />
               </ProtectedRoute>
             }
           />

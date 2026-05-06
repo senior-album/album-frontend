@@ -512,6 +512,58 @@ class ApiClient {
     });
   }
 
+  // ==================== Events Calendar (T-243) ====================
+
+  public listFacilityEvents(
+    facilityId: string,
+    params?: {
+      from?: string; // ISO datetime
+      to?: string;
+      resident_id?: string;
+      type?: string;
+    },
+  ) {
+    return this.instance.get(`/facilities/${facilityId}/events`, { params });
+  }
+
+  public createFacilityEvent(
+    facilityId: string,
+    body: {
+      type: string;
+      title: string;
+      description?: string | null;
+      start_at: string;
+      end_at?: string | null;
+      all_day: boolean;
+      resident_id?: string | null;
+    },
+  ) {
+    return this.instance.post(`/facilities/${facilityId}/events`, body);
+  }
+
+  public getEvent(eventId: string) {
+    return this.instance.get(`/events/${eventId}`);
+  }
+
+  public updateEvent(
+    eventId: string,
+    body: {
+      type?: string;
+      title?: string;
+      description?: string | null;
+      start_at?: string;
+      end_at?: string | null;
+      all_day?: boolean;
+      resident_id?: string | null;
+    },
+  ) {
+    return this.instance.patch(`/events/${eventId}`, body);
+  }
+
+  public deleteEvent(eventId: string) {
+    return this.instance.delete(`/events/${eventId}`);
+  }
+
   // ==================== Facility Staff Approvals (T-056) ====================
 
   public listPendingStaff() {
