@@ -258,17 +258,17 @@ const GuardianGalleryPage: React.FC = () => {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white shadow-soft">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex justify-between items-center">
-            <div>
-              <h1 className="text-2xl font-bold text-primary">어르신 갤러리</h1>
-              <p className="text-sm text-gray-600">
+          <div className="flex justify-between items-center gap-3">
+            <div className="min-w-0 flex-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-primary">어르신 갤러리</h1>
+              <p className="text-xs sm:text-sm text-gray-600 truncate">
                 {hasApproved
                   ? `${facilityGroups.length}개 시설 · ${allResidents.length}명의 어르신 · ${photos.length}장의 사진`
                   : '시설과 연결하면 어르신의 사진을 볼 수 있어요'}
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-shrink-0">
               {hasInvitations && (
                 <div className="relative">
                   <Mail size={20} className="text-green-600" />

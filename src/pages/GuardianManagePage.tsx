@@ -106,18 +106,16 @@ const GuardianManagePage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">보호자 관리</h1>
-            <p className="text-gray-600 mt-1">
-              대기 {pendingGuardians.length}명 | 승인 {approvedGuardians.length}명 | 거부 {rejectedGuardians.length}명
-            </p>
-          </div>
+      <div className="space-y-6 sm:space-y-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">보호자 관리</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
+            대기 {pendingGuardians.length}명 | 승인 {approvedGuardians.length}명 | 거부 {rejectedGuardians.length}명
+          </p>
         </div>
 
         {/* 탭 */}
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             onClick={() => setActiveTab('pending')}
             className={`px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 ${
@@ -158,9 +156,9 @@ const GuardianManagePage: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {pendingGuardians.map((guardian) => (
-                <div key={guardian.id} className="bg-white rounded-lg shadow-soft p-6 border-l-4 border-yellow-400">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-2">
+                <div key={guardian.id} className="bg-white rounded-lg shadow-soft p-4 sm:p-6 border-l-4 border-yellow-400">
+                  <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+                    <div className="space-y-2 min-w-0 flex-1">
                       <div className="flex items-center gap-3">
                         <h3 className="text-lg font-bold text-gray-900">{guardian.user_name}</h3>
                         <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">
@@ -193,11 +191,11 @@ const GuardianManagePage: React.FC = () => {
                       </p>
                     </div>
 
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-shrink-0">
                       <button
                         onClick={() => handleApprove(guardian.id)}
                         disabled={processing === guardian.id}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition disabled:opacity-50"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 bg-green-500 text-white rounded-lg font-medium hover:bg-green-600 transition disabled:opacity-50"
                       >
                         <CheckCircle size={16} />
                         승인
@@ -205,7 +203,7 @@ const GuardianManagePage: React.FC = () => {
                       <button
                         onClick={() => setRejectModal(guardian.id)}
                         disabled={processing === guardian.id}
-                        className="flex items-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition disabled:opacity-50"
+                        className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-4 py-2 bg-red-500 text-white rounded-lg font-medium hover:bg-red-600 transition disabled:opacity-50"
                       >
                         <XCircle size={16} />
                         거부
@@ -224,26 +222,26 @@ const GuardianManagePage: React.FC = () => {
               <h2 className="text-xl font-bold text-gray-900 mb-2">등록된 보호자가 없습니다</h2>
             </div>
           ) : (
-            <div className="bg-white rounded-lg shadow-soft overflow-hidden">
-              <table className="w-full">
+            <div className="bg-white rounded-lg shadow-soft overflow-x-auto">
+              <table className="w-full text-xs sm:text-sm">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">보호자</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">이메일</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">입소자</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">관계</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">상태</th>
-                    <th className="px-6 py-3 text-left text-sm font-semibold text-gray-900">신청일</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900">보호자</th>
+                    <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900">이메일</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900">입소자</th>
+                    <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900">관계</th>
+                    <th className="px-3 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900">상태</th>
+                    <th className="hidden md:table-cell px-3 sm:px-6 py-3 text-left text-sm font-semibold text-gray-900">신청일</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200">
                   {allGuardians.map((guardian) => (
                     <tr key={guardian.id} className="hover:bg-gray-50 transition">
-                      <td className="px-6 py-4 text-sm font-medium text-gray-900">{guardian.user_name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{guardian.user_email}</td>
-                      <td className="px-6 py-4 text-sm text-gray-900">{guardian.resident_name}</td>
-                      <td className="px-6 py-4 text-sm text-gray-600">{guardian.relationship_type || '-'}</td>
-                      <td className="px-6 py-4 text-sm">
+                      <td className="px-3 sm:px-6 py-4 text-sm font-medium text-gray-900">{guardian.user_name}</td>
+                      <td className="hidden md:table-cell px-3 sm:px-6 py-4 text-sm text-gray-600">{guardian.user_email}</td>
+                      <td className="px-3 sm:px-6 py-4 text-sm text-gray-900">{guardian.resident_name}</td>
+                      <td className="hidden md:table-cell px-3 sm:px-6 py-4 text-sm text-gray-600">{guardian.relationship_type || '-'}</td>
+                      <td className="px-3 sm:px-6 py-4 text-sm">
                         {guardian.is_approved ? (
                           <span className="px-2 py-0.5 bg-green-100 text-green-800 text-xs font-medium rounded">승인됨</span>
                         ) : guardian.is_rejected ? (
@@ -252,7 +250,7 @@ const GuardianManagePage: React.FC = () => {
                           <span className="px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-medium rounded">대기중</span>
                         )}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500">{new Date(guardian.created_at).toLocaleDateString('ko-KR')}</td>
+                      <td className="hidden md:table-cell px-3 sm:px-6 py-4 text-sm text-gray-500">{new Date(guardian.created_at).toLocaleDateString('ko-KR')}</td>
                     </tr>
                   ))}
                 </tbody>
