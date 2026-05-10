@@ -94,15 +94,15 @@ const AdminStatsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 shadow-soft">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-wrap items-center gap-3 sm:gap-4">
           <Link to="/dashboard" className="p-2 hover:bg-gray-100 rounded-lg transition" aria-label="뒤로">
             <ArrowLeft size={20} />
           </Link>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-900">운영자 통계</h1>
             <p className="text-xs text-gray-500">전 플랫폼 카운트 + 최근 7일 추세</p>
           </div>
-          <nav className="flex gap-3 text-xs">
+          <nav className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
             <Link to="/admin/users" className="text-gray-500 hover:text-gray-900">유저 관리</Link>
             <Link to="/admin/facilities" className="text-gray-500 hover:text-gray-900">시설 관리</Link>
             <Link to="/admin/guardians" className="text-gray-500 hover:text-gray-900">보호자 승인</Link>
@@ -117,7 +117,7 @@ const AdminStatsPage: React.FC = () => {
         {err && <p className="bg-red-50 border border-red-200 text-red-700 text-sm rounded p-3">{err}</p>}
         {stats && (
           <>
-            <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card
                 icon={<Users size={20} />}
                 label="유저"
@@ -146,7 +146,7 @@ const AdminStatsPage: React.FC = () => {
               />
             </section>
 
-            <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <Card
                 icon={<ListChecks size={20} />}
                 label="처리 큐 적체"

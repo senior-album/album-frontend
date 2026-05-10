@@ -138,15 +138,15 @@ const AdminUsersPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 shadow-soft">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-wrap items-center gap-3 sm:gap-4">
           <Link to="/dashboard" className="p-2 hover:bg-gray-100 rounded-lg transition" aria-label="뒤로">
             <ArrowLeft size={20} />
           </Link>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-900">전체 유저 관리</h1>
             <p className="text-xs text-gray-500">운영자 전용 — 활성/권한 토글 + 시설 배정</p>
           </div>
-          <nav className="flex gap-3 text-xs">
+          <nav className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
             <Link to="/admin/stats" className="text-gray-500 hover:text-gray-900">통계</Link>
             <Link to="/admin/facilities" className="text-gray-500 hover:text-gray-900">시설 관리</Link>
             <Link to="/admin/guardians" className="text-gray-500 hover:text-gray-900">보호자 승인</Link>
@@ -220,17 +220,17 @@ const AdminUsersPage: React.FC = () => {
           {loading && <p className="p-4 text-gray-400 text-sm">불러오는 중...</p>}
           {!loading && items.length === 0 && <p className="p-4 text-gray-400 text-sm">조건에 해당하는 유저가 없습니다.</p>}
           {!loading && items.length > 0 && (
-            <table className="w-full text-sm">
+            <table className="w-full text-xs sm:text-sm">
               <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium">이름 / 이메일</th>
-                  <th className="text-left px-3 py-2 font-medium">역할</th>
-                  <th className="text-left px-3 py-2 font-medium">시설</th>
+                  <th className="hidden md:table-cell text-left px-3 py-2 font-medium">역할</th>
+                  <th className="hidden md:table-cell text-left px-3 py-2 font-medium">시설</th>
                   <th className="text-center px-3 py-2 font-medium">활성</th>
                   <th className="text-center px-3 py-2 font-medium">시설관리자</th>
                   <th className="text-center px-3 py-2 font-medium">운영자</th>
-                  <th className="text-left px-3 py-2 font-medium">가입</th>
-                  <th className="text-left px-3 py-2 font-medium">상태</th>
+                  <th className="hidden md:table-cell text-left px-3 py-2 font-medium">가입</th>
+                  <th className="hidden md:table-cell text-left px-3 py-2 font-medium">상태</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -244,8 +244,8 @@ const AdminUsersPage: React.FC = () => {
                         <div className="text-xs text-gray-500">{u.email}</div>
                         {u.provider && <div className="text-xs text-gray-400">via {u.provider}</div>}
                       </td>
-                      <td className="px-3 py-2 text-gray-700">{u.role === 'staff' ? '직원' : '보호자'}</td>
-                      <td className="px-3 py-2">
+                      <td className="hidden md:table-cell px-3 py-2 text-gray-700">{u.role === 'staff' ? '직원' : '보호자'}</td>
+                      <td className="hidden md:table-cell px-3 py-2">
                         <button
                           type="button"
                           onClick={() => openFacilityEdit(u)}
@@ -282,10 +282,10 @@ const AdminUsersPage: React.FC = () => {
                           title={isSelf && u.is_operator ? '자기 자신의 운영자 권한은 해제할 수 없습니다' : '운영자 권한'}
                         />
                       </td>
-                      <td className="px-3 py-2 text-xs text-gray-500">
+                      <td className="hidden md:table-cell px-3 py-2 text-xs text-gray-500">
                         {u.created_at ? new Date(u.created_at).toLocaleDateString('ko-KR') : '-'}
                       </td>
-                      <td className="px-3 py-2 text-xs">
+                      <td className="hidden md:table-cell px-3 py-2 text-xs">
                         {state === 'saving' && <span className="text-gray-500">저장 중...</span>}
                         {state === 'ok' && <span className="text-green-600">저장됨</span>}
                         {state && typeof state === 'object' && 'err' in state && (
