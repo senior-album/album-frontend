@@ -110,9 +110,9 @@ const FacilityPermissionsPage: React.FC = () => {
       <div className="max-w-5xl mx-auto">
         <div className="flex items-center gap-3 mb-2">
           <Shield className="text-primary" size={28} />
-          <h1 className="text-2xl font-bold text-gray-900">메뉴 권한 위임</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">메뉴 권한 위임</h1>
         </div>
-        <p className="text-gray-600 mb-6">
+        <p className="text-sm sm:text-base text-gray-600 mb-6">
           시설 직원에게 메뉴별 접근 권한을 위임합니다. 시설장(본인) 과 운영자는 모든 메뉴를 자동으로 볼 수 있습니다.
         </p>
 
@@ -132,17 +132,17 @@ const FacilityPermissionsPage: React.FC = () => {
             소속된 직원이 없습니다.
           </div>
         ) : (
-          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
-            <table className="w-full">
+          <div className="bg-white border border-gray-200 rounded-lg overflow-x-auto">
+            <table className="w-full text-xs sm:text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">
+                  <th className="px-2 sm:px-4 py-3 text-left text-sm font-medium text-gray-700">
                     직원
                   </th>
                   {keys.map((k) => (
                     <th
                       key={k.key}
-                      className="px-4 py-3 text-center text-sm font-medium text-gray-700"
+                      className="px-2 sm:px-4 py-3 text-center text-sm font-medium text-gray-700"
                       title={k.key}
                     >
                       {k.description}
@@ -155,7 +155,7 @@ const FacilityPermissionsPage: React.FC = () => {
                   const auto = row.has_all_via_role;
                   return (
                     <tr key={row.user_id} className={auto ? 'bg-blue-50/40' : undefined}>
-                      <td className="px-4 py-3">
+                      <td className="px-2 sm:px-4 py-3">
                         <div className="font-medium text-gray-900">
                           {row.name}
                           {row.user_id === user.id && (
@@ -175,7 +175,7 @@ const FacilityPermissionsPage: React.FC = () => {
                         const checked = auto || row.permission_keys.includes(k.key);
                         const disabled = auto || state === 'saving';
                         return (
-                          <td key={k.key} className="px-4 py-3 text-center">
+                          <td key={k.key} className="px-2 sm:px-4 py-3 text-center">
                             <div className="inline-flex items-center gap-2">
                               <input
                                 type="checkbox"

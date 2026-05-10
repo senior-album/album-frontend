@@ -162,15 +162,15 @@ const AdminLegalSettingsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 shadow-soft">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-wrap items-center gap-3 sm:gap-4">
           <Link to="/dashboard" className="p-2 hover:bg-gray-100 rounded-lg transition" aria-label="뒤로">
             <ArrowLeft size={20} />
           </Link>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-900">법령 설정</h1>
             <p className="text-xs text-gray-500">운영자 전용 — 회사 정보 + 약관 본문 발행</p>
           </div>
-          <nav className="flex gap-3 text-xs">
+          <nav className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
             <Link to="/admin/stats" className="text-gray-500 hover:text-gray-900">통계</Link>
             <Link to="/admin/users" className="text-gray-500 hover:text-gray-900">유저 관리</Link>
             <Link to="/admin/facilities" className="text-gray-500 hover:text-gray-900">시설 관리</Link>

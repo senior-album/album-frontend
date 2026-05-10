@@ -128,13 +128,13 @@ const FacilityStatsTrendsInner: React.FC = () => {
   return (
     <Layout>
       <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
           <div className="flex items-center gap-3">
             <BarChart3 className="text-primary" size={28} />
-            <h1 className="text-2xl font-bold text-gray-900">시설 사용 지표</h1>
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">시설 사용 지표</h1>
           </div>
 
-          <div className="flex gap-1 bg-white border border-gray-200 rounded-lg p-1">
+          <div className="flex gap-1 bg-white border border-gray-200 rounded-lg p-1 self-start sm:self-auto">
             {RANGES.map((r) => (
               <button
                 key={r.value}
@@ -165,7 +165,7 @@ const FacilityStatsTrendsInner: React.FC = () => {
         ) : (
           <>
             {kpis && (
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                 <KPICard
                   icon={<ImageIcon size={16} />}
                   label="이번 달 업로드"

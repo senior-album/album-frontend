@@ -111,15 +111,15 @@ const AdminGuardiansPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 shadow-soft">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center gap-4">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4 flex flex-wrap items-center gap-3 sm:gap-4">
           <Link to="/dashboard" className="p-2 hover:bg-gray-100 rounded-lg transition" aria-label="뒤로">
             <ArrowLeft size={20} />
           </Link>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <h1 className="text-xl font-bold text-gray-900">보호자 승인 현황</h1>
             <p className="text-xs text-gray-500">운영자 전용 — 전체 시설 across 모니터링 (승인 액션은 시설장 페이지에서)</p>
           </div>
-          <nav className="flex gap-3 text-xs">
+          <nav className="flex flex-wrap gap-x-3 gap-y-1 text-xs">
             <Link to="/admin/stats" className="text-gray-500 hover:text-gray-900">통계</Link>
             <Link to="/admin/users" className="text-gray-500 hover:text-gray-900">유저 관리</Link>
             <Link to="/admin/facilities" className="text-gray-500 hover:text-gray-900">시설 관리</Link>
@@ -176,16 +176,16 @@ const AdminGuardiansPage: React.FC = () => {
           {loading && <p className="p-4 text-gray-400 text-sm">불러오는 중...</p>}
           {!loading && items.length === 0 && <p className="p-4 text-gray-400 text-sm">조건에 해당하는 보호자 요청이 없습니다.</p>}
           {!loading && items.length > 0 && (
-            <table className="w-full text-sm">
+            <table className="w-full text-xs sm:text-sm">
               <thead className="bg-gray-50 border-b border-gray-200 text-xs text-gray-600">
                 <tr>
                   <th className="text-left px-3 py-2 font-medium">상태</th>
                   <th className="text-left px-3 py-2 font-medium">보호자</th>
-                  <th className="text-left px-3 py-2 font-medium">시설</th>
+                  <th className="hidden md:table-cell text-left px-3 py-2 font-medium">시설</th>
                   <th className="text-left px-3 py-2 font-medium">입소자</th>
-                  <th className="text-left px-3 py-2 font-medium">관계</th>
-                  <th className="text-left px-3 py-2 font-medium">요청 메시지</th>
-                  <th className="text-left px-3 py-2 font-medium">신청일</th>
+                  <th className="hidden md:table-cell text-left px-3 py-2 font-medium">관계</th>
+                  <th className="hidden md:table-cell text-left px-3 py-2 font-medium">요청 메시지</th>
+                  <th className="hidden md:table-cell text-left px-3 py-2 font-medium">신청일</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -206,17 +206,17 @@ const AdminGuardiansPage: React.FC = () => {
                         <div className="text-xs text-gray-500">{g.user_email}</div>
                         {g.user_phone && <div className="text-xs text-gray-400">{g.user_phone}</div>}
                       </td>
-                      <td className="px-3 py-2 text-gray-700">
+                      <td className="hidden md:table-cell px-3 py-2 text-gray-700">
                         {g.facility_name ?? <span className="text-gray-400 italic">미지정</span>}
                       </td>
                       <td className="px-3 py-2 text-gray-700">
                         {g.resident_name ?? <span className="text-gray-400 italic">미배정</span>}
                       </td>
-                      <td className="px-3 py-2 text-gray-700">{g.relationship_type ?? '-'}</td>
-                      <td className="px-3 py-2 text-xs text-gray-700 max-w-xs truncate" title={g.request_message ?? ''}>
+                      <td className="hidden md:table-cell px-3 py-2 text-gray-700">{g.relationship_type ?? '-'}</td>
+                      <td className="hidden md:table-cell px-3 py-2 text-xs text-gray-700 max-w-xs truncate" title={g.request_message ?? ''}>
                         {g.request_message ?? '-'}
                       </td>
-                      <td className="px-3 py-2 text-xs text-gray-500">
+                      <td className="hidden md:table-cell px-3 py-2 text-xs text-gray-500">
                         {g.created_at ? new Date(g.created_at).toLocaleString('ko-KR') : '-'}
                       </td>
                     </tr>
