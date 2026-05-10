@@ -315,17 +315,17 @@ const ResidentsPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="space-y-8">
+      <div className="space-y-6 sm:space-y-8">
         {/* Header */}
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">입소자 관리</h1>
-            <p className="text-gray-600 mt-1">총 {residents.length}명 ({activeResidents.length}명 활성)</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">입소자 관리</h1>
+            <p className="text-sm sm:text-base text-gray-600 mt-1">총 {residents.length}명 ({activeResidents.length}명 활성)</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={openCsvModal}
-              className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+              className="flex items-center gap-2 bg-white border border-gray-200 text-gray-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-50 transition shadow-sm"
               title="CSV 파일로 한 번에 최대 100명 등록"
             >
               <FileSpreadsheet size={18} />
@@ -333,7 +333,7 @@ const ResidentsPage: React.FC = () => {
             </button>
             <button
               onClick={handleAddResident}
-              className="flex items-center gap-2 bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition shadow-soft"
+              className="flex items-center gap-2 bg-primary text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-semibold hover:opacity-90 transition shadow-soft"
             >
               <Plus size={20} />
               입소자 등록
@@ -399,7 +399,86 @@ const ResidentsPage: React.FC = () => {
               )}
             </div>
 
-            <div className="overflow-x-auto">
+            {/* 모바일 카드 리스트 (md 미만) — T-140: 9컬럼 테이블이 모바일에서
+                가로스크롤만 가능했음. 카드로 분기해 자주 쓰는 액션 (기준 사진/초대/안부일지/수정) 만 노출 */}
+            <div className="md:hidden divide-y divide-gray-200">
+              {filteredResidents.map((resident) => (
+                <div key={resident.id} className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-base font-semibold text-gray-900 truncate">{resident.name}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {getAge(resident.birth_date)}세
+                        {resident.room_number ? ` · ${resident.room_number}호` : ''}
+                        {(resident as any).code ? ` · 코드 ${(resident as any).code}` : ''}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-1 flex-shrink-0">
+                      <button
+                        onClick={() => navigate(`/residents/${resident.id}/wellness-logs`)}
+                        className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition"
+                        title="안부 일지"
+                      >
+                        <ClipboardList size={18} />
+                      </button>
+                      <button
+                        onClick={() => handleEditResident(resident)}
+                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition"
+                        title="입소자 정보 수정"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between gap-3 mt-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      {(faceCounts[resident.id] || 0) > 0 ? (
+                        <button
+                          onClick={() => openFaceListModal(resident)}
+                          className="flex items-center gap-1 text-green-600"
+                        >
+                          <CheckCircle size={14} />
+                          <span className="font-medium">기준 {faceCounts[resident.id]}장</span>
+                        </button>
+                      ) : (
+                        <span className="flex items-center gap-1 text-gray-400">
+                          <XCircle size={14} />
+                          <span>기준 없음</span>
+                        </span>
+                      )}
+                      <button
+                        onClick={() => {
+                          setSelectedResident(resident);
+                          setFacePreview(null);
+                          setFaceFile(null);
+                          setShowFaceModal(true);
+                        }}
+                        className="text-blue-500 hover:text-blue-700 transition"
+                        title="기준 사진 추가 등록"
+                      >
+                        <Camera size={16} />
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedResident(resident);
+                        setInvitePhone('');
+                        setInviteRelationship('');
+                        setInviteMessage('');
+                        setShowInviteModal(true);
+                      }}
+                      className="flex items-center gap-1 text-green-600 hover:text-green-800 transition"
+                    >
+                      <UserPlus size={16} />
+                      <span>초대</span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 데스크탑 테이블 (md+) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
