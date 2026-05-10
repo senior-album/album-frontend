@@ -151,8 +151,18 @@ const LoginPage: React.FC = () => {
           </button>
 
           {/* Footer */}
-          <div className="mt-6 text-center text-xs text-gray-500">
-            <p>아직 계정이 없으신가요? <Link to="/register" className="text-primary font-medium hover:underline">이메일로 가입하기</Link></p>
+          <div className="mt-6 text-center text-xs text-gray-500 space-y-2">
+            <p>
+              아직 계정이 없으신가요?{' '}
+              <Link to="/register" className="text-primary font-medium hover:underline">
+                이메일로 가입하기
+              </Link>
+            </p>
+            <p>
+              <Link to="/forgot-password" className="text-primary font-medium hover:underline">
+                비밀번호를 잊으셨나요?
+              </Link>
+            </p>
           </div>
         </div>
 

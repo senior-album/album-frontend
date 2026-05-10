@@ -104,6 +104,16 @@ class ApiClient {
     return this.instance.post('/auth/register/guardian', data);
   }
 
+  // T-306: 비밀번호 재설정. 응답은 항상 generic 200 (enumeration 방지) — UI 는
+  // 사용자 존재 여부와 무관하게 동일 안내 표시.
+  public passwordResetRequest(data: { identifier: string; channel: 'email' | 'sms' }) {
+    return this.instance.post('/auth/password/reset/request', data);
+  }
+
+  public passwordResetConfirm(data: { token: string; new_password: string }) {
+    return this.instance.post('/auth/password/reset/confirm', data);
+  }
+
   public getActiveConsents() {
     return this.instance.get('/consents/active');
   }
