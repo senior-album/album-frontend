@@ -28,6 +28,7 @@ const PhotosPage: React.FC = () => {
   const [filterBy, setFilterBy] = useState<PhotoFilter>(initialFilter);
   const [selectedResident, setSelectedResident] = useState<string>('all');
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [shareModal, setShareModal] = useState<{ photoId: string; url: string } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
@@ -122,21 +123,27 @@ const PhotosPage: React.FC = () => {
 
   // T-140: PhotoUploader 컴포넌트가 모바일 카메라/갤러리 분리 + 데스크탑 드래그앤드롭을
   // 통합 처리. 여기서는 실제 업로드 호출만 책임.
+  // T-308: chunk 분할 (apiClient.uploadPhotos) — 30장+ 한 요청은 nginx 50M 초과로 413.
   const doUpload = async (files: File[]) => {
     if (files.length === 0 || !facilityId) return;
     setIsUploading(true);
+    setUploadProgress({ done: 0, total: files.length });
     try {
-      const formData = new FormData();
-      for (const f of files) {
-        formData.append('files', f);
+      const { uploadedCount, failed } = await apiClient.uploadPhotos(
+        facilityId,
+        files,
+        (done, total) => setUploadProgress({ done, total }),
+      );
+      if (failed.length > 0) {
+        alert(`${uploadedCount}장 업로드 성공, ${failed.length}장 실패. 잠시 후 다시 시도해주세요.`);
       }
-      await apiClient.uploadPhoto(facilityId, formData);
       await fetchData();
     } catch (err) {
       console.error('Upload failed:', err);
       alert('Upload failed');
     } finally {
       setIsUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -360,7 +367,11 @@ const PhotosPage: React.FC = () => {
 
         <div className="bg-white rounded-lg shadow-soft p-4 sm:p-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">사진 업로드</h2>
-          <PhotoUploader onUpload={doUpload} isLoading={isUploading} />
+          <PhotoUploader
+            onUpload={doUpload}
+            isLoading={isUploading}
+            progress={uploadProgress}
+          />
         </div>
 
         <div className="bg-white rounded-lg shadow-soft p-4 sm:p-6">

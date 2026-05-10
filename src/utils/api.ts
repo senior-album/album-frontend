@@ -232,6 +232,57 @@ class ApiClient {
     });
   }
 
+  // T-308: 한 요청에 다 묶어 보내면 frontend nginx client_max_body_size 50M
+  // 초과로 413 (30장 × 평균 4MB ≈ 120MB). chunk 단위 순차 업로드로 분할.
+  // 한도는 byte/count 둘 다 둠 — 폰 사진 12MP+ 가 장당 6~10MB 까지 큼.
+  // 순차 호출인 이유: 백엔드 _upload_one_to_storage 가 chunk 내부에서
+  // 이미 동시 PIL 디코딩 + MinIO 업로드 → 클라이언트까지 병렬화하면
+  // 메모리/큐 부담 폭증 + 큐 cap 거절 위험.
+  public async uploadPhotos(
+    facilityId: string,
+    files: File[],
+    onProgress?: (processed: number, total: number) => void,
+  ): Promise<{ uploadedCount: number; failed: File[] }> {
+    const MAX_CHUNK_BYTES = 40 * 1024 * 1024; // nginx 50M - multipart overhead 여유
+    const MAX_CHUNK_COUNT = 8;
+
+    const chunks: File[][] = [];
+    let cur: File[] = [];
+    let curBytes = 0;
+    for (const f of files) {
+      const wouldExceedBytes = cur.length > 0 && curBytes + f.size > MAX_CHUNK_BYTES;
+      const wouldExceedCount = cur.length >= MAX_CHUNK_COUNT;
+      if (wouldExceedBytes || wouldExceedCount) {
+        chunks.push(cur);
+        cur = [];
+        curBytes = 0;
+      }
+      cur.push(f);
+      curBytes += f.size;
+    }
+    if (cur.length > 0) chunks.push(cur);
+
+    const failed: File[] = [];
+    let uploadedCount = 0;
+    let processed = 0;
+    onProgress?.(0, files.length);
+
+    for (const chunk of chunks) {
+      try {
+        const fd = new FormData();
+        for (const f of chunk) fd.append('files', f);
+        await this.uploadPhoto(facilityId, fd);
+        uploadedCount += chunk.length;
+      } catch (e) {
+        failed.push(...chunk);
+      }
+      processed += chunk.length;
+      onProgress?.(processed, files.length);
+    }
+
+    return { uploadedCount, failed };
+  }
+
   // ==================== Photo Like/Share ====================
 
   public toggleLike(photoId: string) {

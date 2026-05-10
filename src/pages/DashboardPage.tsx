@@ -51,6 +51,7 @@ const DashboardPage: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ done: number; total: number } | null>(null);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -96,21 +97,28 @@ const DashboardPage: React.FC = () => {
   const handleUpload = async () => {
     if (selectedFiles.length === 0 || !facilityId) return;
     setIsUploading(true);
+    setUploadProgress({ done: 0, total: selectedFiles.length });
     try {
-      const formData = new FormData();
-      formData.append('facility_id', facilityId);
-      for (const file of selectedFiles) {
-        formData.append('files', file);
+      const { uploadedCount, failed } = await apiClient.uploadPhotos(
+        facilityId,
+        selectedFiles,
+        (done, total) => setUploadProgress({ done, total }),
+      );
+      if (failed.length > 0) {
+        alert(`${uploadedCount}장 업로드 성공, ${failed.length}장 실패. 잠시 후 다시 시도해주세요.`);
+        // 실패한 사진은 selectedFiles 에 남겨 사용자가 재시도 / 제거 가능.
+        setSelectedFiles(failed);
+      } else {
+        setSelectedFiles([]);
+        setShowUploadModal(false);
       }
-      await apiClient.uploadPhoto(facilityId, formData);
-      setSelectedFiles([]);
-      setShowUploadModal(false);
       await fetchStats();
     } catch (err) {
       console.error('Upload failed:', err);
       alert('Upload failed');
     } finally {
       setIsUploading(false);
+      setUploadProgress(null);
     }
   };
 
@@ -438,7 +446,11 @@ const DashboardPage: React.FC = () => {
                 {isUploading ? (
                   <React.Fragment>
                     <Loader2 className="animate-spin" size={18} />
-                    <span>업로드 중...</span>
+                    <span>
+                      {uploadProgress
+                        ? `업로드 중... (${uploadProgress.done} / ${uploadProgress.total})`
+                        : '업로드 중...'}
+                    </span>
                   </React.Fragment>
                 ) : (
                   <span>{selectedFiles.length > 0 ? selectedFiles.length + '개 ' : ''}업로드</span>
