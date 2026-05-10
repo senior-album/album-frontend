@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Plus, Edit2, Camera, Loader2, UserPlus, Phone, Trash2, CheckCircle, XCircle, Image, Upload, Download, FileSpreadsheet, X, ClipboardList } from 'lucide-react';
+import { Plus, Edit2, Camera, Loader2, UserPlus, Phone, Trash2, CheckCircle, XCircle, Image, Upload, Download, FileSpreadsheet, X, ClipboardList, Copy, MessageSquare, Mail } from 'lucide-react';
 import Layout from '../components/Layout';
 import { apiClient } from '../utils/api';
 import { Resident } from '../types';
@@ -68,6 +68,18 @@ const ResidentsPage: React.FC = () => {
   } | null>(null);
   const [inviteSearchError, setInviteSearchError] = useState<string | null>(null);
   const [inviteSelectedUserId, setInviteSelectedUserId] = useState<string | null>(null);
+  // T-304: 백엔드는 sms/email 채널을 실제 발송하지 않고 invite_url + delivery_status="manual_share"
+  // 만 돌려준다. 모달이 폼 → 공유 뷰로 전환되어 직원이 본인 메신저로 복사·공유.
+  const [inviteShare, setInviteShare] = useState<{
+    inviteUrl: string;
+    channel: 'phone' | 'email' | 'in_app';
+    targetLabel: string;
+    phone?: string;
+    email?: string;
+    facilityName?: string;
+    residentName?: string;
+  } | null>(null);
+  const [inviteUrlCopied, setInviteUrlCopied] = useState(false);
 
   // T-030: CSV 일괄 import
   const [showCsvModal, setShowCsvModal] = useState(false);
@@ -817,14 +829,114 @@ const ResidentsPage: React.FC = () => {
       {showInviteModal && selectedResident && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
-          onClick={() => setShowInviteModal(false)}
+          onClick={() => {
+            setShowInviteModal(false);
+            setInviteShare(null);
+          }}
         >
           <div className="bg-white rounded-lg max-w-md w-full p-8" onClick={(e) => e.stopPropagation()}>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">보호자 초대</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">
+              {inviteShare ? '초대 링크 공유' : '보호자 초대'}
+            </h2>
             <p className="text-sm text-gray-500 mb-6">
-              <strong>{selectedResident.name}</strong>님의 보호자를 초대합니다
+              {inviteShare ? (
+                <>
+                  <strong>{inviteShare.residentName ?? selectedResident.name}</strong>님 보호자 초대 링크가 만들어졌어요. 아래 링크를 본인 메신저로 직접 보내주세요.
+                </>
+              ) : (
+                <>
+                  <strong>{selectedResident.name}</strong>님의 보호자를 초대합니다
+                </>
+              )}
             </p>
 
+            {inviteShare ? (
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-900 mb-2">초대 링크</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={inviteShare.inviteUrl}
+                      readOnly
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-sm font-mono"
+                      onFocus={(e) => e.currentTarget.select()}
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        try {
+                          await navigator.clipboard.writeText(inviteShare.inviteUrl);
+                          setInviteUrlCopied(true);
+                          setTimeout(() => setInviteUrlCopied(false), 1500);
+                        } catch {
+                          alert('복사 실패. 링크를 직접 선택해 복사해주세요.');
+                        }
+                      }}
+                      className="px-3 py-2 bg-primary text-white rounded-lg flex items-center gap-1 text-sm hover:opacity-90"
+                    >
+                      {inviteUrlCopied ? <CheckCircle size={16} /> : <Copy size={16} />}
+                      {inviteUrlCopied ? '복사됨' : '복사'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    수신자가 링크를 누르면 가입 후 초대 수락 페이지로 이동합니다.
+                  </p>
+                </div>
+
+                {/* 채널별 deeplink — 직원 단말의 SMS / 메일 앱 열어 본문 prefill */}
+                {(() => {
+                  const subject = `${inviteShare.facilityName ?? '시설'} 보호자 초대`;
+                  const body = `${inviteShare.facilityName ?? '시설'}에서 ${inviteShare.residentName ?? selectedResident?.name ?? ''}님의 보호자로 초대드립니다.\n아래 링크에서 가입 후 초대를 수락해주세요.\n${inviteShare.inviteUrl}`;
+                  if (inviteShare.channel === 'phone' && inviteShare.phone) {
+                    const sms = `sms:${inviteShare.phone}?body=${encodeURIComponent(body)}`;
+                    return (
+                      <a
+                        href={sms}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg font-medium hover:bg-blue-100 transition"
+                      >
+                        <MessageSquare size={16} />
+                        문자 앱에서 열기 ({inviteShare.phone})
+                      </a>
+                    );
+                  }
+                  if (inviteShare.channel === 'email' && inviteShare.email) {
+                    const mailto = `mailto:${inviteShare.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                    return (
+                      <a
+                        href={mailto}
+                        className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 border border-blue-200 rounded-lg font-medium hover:bg-blue-100 transition"
+                      >
+                        <Mail size={16} />
+                        이메일 앱에서 열기 ({inviteShare.email})
+                      </a>
+                    );
+                  }
+                  return null;
+                })()}
+
+                <div className="text-xs text-gray-500 bg-gray-50 border border-gray-200 rounded-lg p-3 leading-relaxed">
+                  카카오 알림톡 / 이메일 자동 발송은 아직 연동 전이라 직접 공유가 필요해요. 추후 자동 발송이 가능해지면 이 단계가 사라집니다.
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowInviteModal(false);
+                    setInviteShare(null);
+                    setInvitePhone('');
+                    setInviteEmail('');
+                    setInviteSearchQuery('');
+                    setInviteSearchResult(null);
+                    setInviteSelectedUserId(null);
+                    setInviteSearchError(null);
+                  }}
+                  className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition"
+                >
+                  완료
+                </button>
+              </div>
+            ) : (
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
@@ -838,7 +950,7 @@ const ResidentsPage: React.FC = () => {
                 }
                 setInviteSending(true);
                 try {
-                  await apiClient.createInvitation({
+                  const res = await apiClient.createInvitation({
                     resident_id: selectedResident.id,
                     invite_type: inviteContactType === 'in_app' ? 'in_app' : 'sms',
                     phone: inviteContactType === 'phone' ? invitePhone.trim() : undefined,
@@ -847,22 +959,40 @@ const ResidentsPage: React.FC = () => {
                     relationship_type: inviteRelationship || undefined,
                     message: inviteMessage || undefined,
                   });
+                  const data = res.data as {
+                    invite_url?: string;
+                    delivery_status?: string;
+                    facility_name?: string;
+                    resident_name?: string;
+                  };
                   const target = inviteContactType === 'phone'
                     ? invitePhone.trim()
                     : inviteContactType === 'email'
                       ? inviteEmail.trim()
                       : (inviteSearchResult?.name_masked ?? '회원');
-                  const tail = inviteContactType === 'in_app'
-                    ? '회원이 알림을 확인하고 수락하면 즉시 연결됩니다.'
-                    : '보호자가 가입 후 초대를 수락하면 사진을 열람할 수 있습니다.';
-                  alert(`${target}로 초대를 보냈습니다.\n${tail}`);
-                  setShowInviteModal(false);
-                  setInvitePhone('');
-                  setInviteEmail('');
-                  setInviteSearchQuery('');
-                  setInviteSearchResult(null);
-                  setInviteSelectedUserId(null);
-                  setInviteSearchError(null);
+
+                  // T-304: 백엔드가 manual_share 면 폼을 공유 뷰로 전환. in_app 은 기존 그대로.
+                  if (data.delivery_status === 'manual_share' && data.invite_url) {
+                    setInviteShare({
+                      inviteUrl: data.invite_url,
+                      channel: inviteContactType,
+                      targetLabel: target,
+                      phone: inviteContactType === 'phone' ? invitePhone.trim() : undefined,
+                      email: inviteContactType === 'email' ? inviteEmail.trim() : undefined,
+                      facilityName: data.facility_name,
+                      residentName: data.resident_name,
+                    });
+                    setInviteUrlCopied(false);
+                  } else {
+                    alert(`${target}로 초대를 보냈습니다.\n회원이 알림을 확인하고 수락하면 즉시 연결됩니다.`);
+                    setShowInviteModal(false);
+                    setInvitePhone('');
+                    setInviteEmail('');
+                    setInviteSearchQuery('');
+                    setInviteSearchResult(null);
+                    setInviteSelectedUserId(null);
+                    setInviteSearchError(null);
+                  }
                 } catch (err: any) {
                   alert(err.response?.data?.detail || '초대에 실패했습니다.');
                 } finally {
@@ -1056,6 +1186,7 @@ const ResidentsPage: React.FC = () => {
                 </button>
               </div>
             </form>
+            )}
           </div>
         </div>
       )}
