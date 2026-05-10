@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Filter, Upload, Loader2, Image, Heart, Share2, Link2, Copy, X, Eye, EyeOff, CheckSquare, Square, Tag, Plus, UserPlus, Trash2 } from 'lucide-react';
+import { Filter, Loader2, Image, Heart, Share2, Link2, Copy, X, Eye, EyeOff, CheckSquare, Square, Tag, Plus, UserPlus, Trash2 } from 'lucide-react';
 import Layout from '../components/Layout';
+import PhotoUploader from '../components/PhotoUploader';
 import { apiClient } from '../utils/api';
 import { Photo, Resident } from '../types';
 
@@ -27,14 +28,12 @@ const PhotosPage: React.FC = () => {
   const [filterBy, setFilterBy] = useState<PhotoFilter>(initialFilter);
   const [selectedResident, setSelectedResident] = useState<string>('all');
   const [isUploading, setIsUploading] = useState(false);
-  const [dragOver, setDragOver] = useState(false);
   const [shareModal, setShareModal] = useState<{ photoId: string; url: string } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [tagModal, setTagModal] = useState<Photo | null>(null);
   const [tagLoading, setTagLoading] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // 페이지네이션 상태
   const [hasMore, setHasMore] = useState(false);
@@ -121,13 +120,15 @@ const PhotosPage: React.FC = () => {
     return () => clearInterval(interval);
   }, [photos, fetchData]);
 
-  const doUpload = async (files: FileList | null) => {
-    if (!files || files.length === 0 || !facilityId) return;
+  // T-140: PhotoUploader 컴포넌트가 모바일 카메라/갤러리 분리 + 데스크탑 드래그앤드롭을
+  // 통합 처리. 여기서는 실제 업로드 호출만 책임.
+  const doUpload = async (files: File[]) => {
+    if (files.length === 0 || !facilityId) return;
     setIsUploading(true);
     try {
       const formData = new FormData();
-      for (let i = 0; i < files.length; i++) {
-        formData.append('files', files[i]);
+      for (const f of files) {
+        formData.append('files', f);
       }
       await apiClient.uploadPhoto(facilityId, formData);
       await fetchData();
@@ -137,36 +138,6 @@ const PhotosPage: React.FC = () => {
     } finally {
       setIsUploading(false);
     }
-  };
-
-  const onClickUploadArea = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-      fileInputRef.current.click();
-    }
-  };
-
-  const onFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    doUpload(e.target.files);
-  };
-
-  const onDragOverHandler = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOver(true);
-  };
-
-  const onDragLeaveHandler = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOver(false);
-  };
-
-  const onDropHandler = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOver(false);
-    doUpload(e.dataTransfer.files);
   };
 
   const handleLike = async (photoId: string) => {
@@ -379,68 +350,28 @@ const PhotosPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">사진 관리</h1>
-            <p className="text-gray-600 mt-1">
-              총 {statsData.total}개 (분류됨: {statsData.classified}, 미분류: {statsData.unclassified})
-            </p>
-          </div>
+      <div className="space-y-6 sm:space-y-8">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">사진 관리</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1">
+            총 {statsData.total}개 (분류됨: {statsData.classified}, 미분류: {statsData.unclassified})
+          </p>
         </div>
 
-        <div className="bg-white rounded-lg shadow-soft p-6">
+        <div className="bg-white rounded-lg shadow-soft p-4 sm:p-6">
           <h2 className="text-lg font-bold text-gray-900 mb-4">사진 업로드</h2>
-
-          <input
-            ref={fileInputRef}
-            type="file"
-            multiple
-            accept="image/*"
-            style={{ display: 'none' }}
-            onChange={onFileInputChange}
-          />
-
-          <div
-            role="button"
-            tabIndex={0}
-            onClick={onClickUploadArea}
-            onDragOver={onDragOverHandler}
-            onDragLeave={onDragLeaveHandler}
-            onDrop={onDropHandler}
-            style={{ cursor: 'pointer' }}
-            className={`border-2 border-dashed rounded-lg p-8 text-center transition ${
-              dragOver
-                ? 'border-blue-500 bg-blue-50'
-                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
-            }`}
-          >
-            {isUploading ? (
-              <div className="flex items-center justify-center gap-3">
-                <Loader2 className="animate-spin text-blue-500" size={32} />
-                <p className="font-semibold text-gray-700">업로드 중...</p>
-              </div>
-            ) : (
-              <div>
-                <Upload className="mx-auto text-gray-400 mb-2" size={48} />
-                <p className="font-semibold text-gray-900 mb-1">
-                  여기를 클릭하거나 이미지를 드래그해서 업로드
-                </p>
-                <p className="text-sm text-gray-500">JPG, PNG 등 이미지 형식 지원 (다중 선택 가능)</p>
-              </div>
-            )}
-          </div>
+          <PhotoUploader onUpload={doUpload} isLoading={isUploading} />
         </div>
 
-        <div className="bg-white rounded-lg shadow-soft p-6">
+        <div className="bg-white rounded-lg shadow-soft p-4 sm:p-6">
           <div className="flex items-center gap-3 mb-4">
             <Filter size={20} className="text-gray-600" />
             <h3 className="font-semibold text-gray-900">필터</h3>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
             <div>
               <label className="block text-sm font-semibold text-gray-900 mb-3">분류 상태</label>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 {([
                   { key: 'all' as const, label: '모두' },
                   { key: 'classified' as const, label: '분류됨' },
@@ -479,7 +410,7 @@ const PhotosPage: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-soft p-6">
+        <div className="bg-white rounded-lg shadow-soft p-4 sm:p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-bold text-gray-900">
               {filteredPhotos.length}개 사진
@@ -499,17 +430,19 @@ const PhotosPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 선택 모드 액션바 */}
+          {/* 선택 모드 액션바 — 모바일은 세로 stack, sm+ 에서 가로 */}
           {selectMode && (
-            <div className="flex items-center gap-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <button
-                onClick={selectAll}
-                className="text-sm font-medium text-blue-600 hover:text-blue-800 transition"
-              >
-                {selectedIds.size === filteredPhotos.length ? '전체 해제' : '전체 선택'}
-              </button>
-              <span className="text-sm text-gray-500">{selectedIds.size}개 선택됨</span>
-              <div className="ml-auto flex gap-2">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={selectAll}
+                  className="text-sm font-medium text-blue-600 hover:text-blue-800 transition"
+                >
+                  {selectedIds.size === filteredPhotos.length ? '전체 해제' : '전체 선택'}
+                </button>
+                <span className="text-sm text-gray-500">{selectedIds.size}개 선택됨</span>
+              </div>
+              <div className="sm:ml-auto flex flex-wrap gap-2">
                 <button
                   onClick={() => handleBulkPublish(true)}
                   disabled={selectedIds.size === 0}
@@ -579,13 +512,14 @@ const PhotosPage: React.FC = () => {
                           </div>
                         )}
                         {/* 공개/비공개 표시 + 토글 */}
+                        {/* T-140: 모바일은 항상 보이게 (호버 없음), md+ 는 호버 시 노출 */}
                         <button
                           onClick={(e) => { e.stopPropagation(); handleTogglePublish(photo.id); }}
                           className={`absolute top-2 right-2 z-10 p-1 rounded-full backdrop-blur-sm transition ${
                             photo.is_public
                               ? 'bg-green-500/80 text-white'
                               : 'bg-gray-500/60 text-white'
-                          } opacity-0 group-hover:opacity-100`}
+                          } opacity-100 md:opacity-0 md:group-hover:opacity-100`}
                           title={photo.is_public ? '공개 (클릭하여 비공개)' : '비공개 (클릭하여 공개)'}
                         >
                           {photo.is_public ? <Eye size={14} /> : <EyeOff size={14} />}
@@ -599,9 +533,9 @@ const PhotosPage: React.FC = () => {
                             </span>
                           </div>
                         )}
-                        {/* 좋아요/공유 버튼 (호버 시, 선택 모드가 아닐때) */}
+                        {/* 좋아요/공유 버튼 — T-140: 모바일은 항상 보이게, md+ 는 호버 시 */}
                         {!selectMode && (
-                          <div className="absolute top-8 right-2 p-0 flex flex-col gap-1 opacity-0 group-hover:opacity-100 transition">
+                          <div className="absolute top-8 right-2 p-0 flex flex-col gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition">
                             <button
                               onClick={(e) => { e.stopPropagation(); handleLike(photo.id); }}
                               className={`p-1.5 rounded-full backdrop-blur-sm transition ${
