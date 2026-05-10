@@ -16,7 +16,8 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
   const location = useLocation();
   const { user, logout } = useAuth();
   const { has: hasPermission } = useFacilityPermission();
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // T-140: 모바일에서는 off-canvas 드로어, md+ 에서는 항상 표시. drawerOpen 은 모바일 전용.
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -52,23 +53,23 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
     return (
       <div className="min-h-screen bg-gray-50">
         <header className="bg-white border-b border-gray-200 shadow-soft">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-primary rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-lg">SA</span>
+          <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-3 sm:py-4 flex justify-between items-center gap-2">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary rounded-lg flex items-center justify-center flex-shrink-0">
+                <span className="text-white font-bold text-base sm:text-lg">SA</span>
               </div>
-              <h1 className="text-xl font-bold text-gray-900">Senior Album</h1>
+              <h1 className="text-base sm:text-xl font-bold text-gray-900 truncate">Senior Album</h1>
             </div>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 px-4 py-2 text-gray-600 hover:text-red-600 transition"
+              className="flex items-center gap-2 px-3 sm:px-4 py-2 text-gray-600 hover:text-red-600 transition flex-shrink-0"
             >
               <LogOut size={18} />
-              <span>로그아웃</span>
+              <span className="hidden sm:inline">로그아웃</span>
             </button>
           </div>
         </header>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
           {children}
         </main>
       </div>
@@ -76,70 +77,94 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      {/* Sidebar */}
-      <div
-        className={`${
-          sidebarOpen ? 'w-64' : 'w-0'
-        } bg-primary text-white transition-all duration-300 overflow-hidden shadow-lg`}
+    <div className="min-h-screen bg-gray-50 md:flex">
+      {/* 모바일 드로어 백드롭 */}
+      {drawerOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar — 모바일은 fixed off-canvas, md+ 는 relative 항상 표시 */}
+      <aside
+        className={`fixed md:relative inset-y-0 left-0 z-50 w-64 bg-primary text-white shadow-lg
+          transform transition-transform duration-300
+          ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
+          md:translate-x-0
+          flex flex-col`}
       >
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+        <div className="p-6 flex items-center justify-between md:justify-start gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center flex-shrink-0">
               <span className="text-primary font-bold text-lg">SA</span>
             </div>
-            {sidebarOpen && <span className="font-bold text-lg">Senior Album</span>}
+            <span className="font-bold text-lg truncate">Senior Album</span>
           </div>
-
-          <nav className="space-y-2">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <button
-                  key={item.path}
-                  onClick={() => navigate(item.path)}
-                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
-                    isActive(item.path)
-                      ? 'bg-secondary text-white'
-                      : 'text-white hover:bg-white hover:bg-opacity-10'
-                  }`}
-                >
-                  <Icon size={20} />
-                  {sidebarOpen && <span>{item.label}</span>}
-                </button>
-              );
-            })}
-          </nav>
+          <button
+            type="button"
+            onClick={() => setDrawerOpen(false)}
+            className="md:hidden p-1 rounded-lg hover:bg-white hover:bg-opacity-10 transition flex-shrink-0"
+            aria-label="메뉴 닫기"
+          >
+            <X size={20} />
+          </button>
         </div>
 
-        <div className="absolute bottom-6 left-6 right-6">
+        <nav className="flex-1 overflow-y-auto px-6 pb-6 space-y-2">
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.path}
+                onClick={() => {
+                  navigate(item.path);
+                  setDrawerOpen(false);
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg transition ${
+                  isActive(item.path)
+                    ? 'bg-secondary text-white'
+                    : 'text-white hover:bg-white hover:bg-opacity-10'
+                }`}
+              >
+                <Icon size={20} />
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </nav>
+
+        <div className="p-6 pt-0">
           <button
             onClick={handleLogout}
             className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-white hover:bg-white hover:bg-opacity-10 transition"
           >
             <LogOut size={20} />
-            {sidebarOpen && <span>로그아웃</span>}
+            <span>로그아웃</span>
           </button>
         </div>
-      </div>
+      </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 shadow-soft">
-          <div className="px-6 py-4 flex justify-between items-center">
+        <header className="bg-white border-b border-gray-200 shadow-soft sticky top-0 z-30">
+          <div className="px-3 sm:px-6 py-3 sm:py-4 flex justify-between items-center gap-2">
             <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
+              onClick={() => setDrawerOpen(true)}
+              className="md:hidden p-2 hover:bg-gray-100 rounded-lg transition flex-shrink-0"
+              aria-label="메뉴 열기"
             >
-              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+              <Menu size={24} />
             </button>
-            <div className="flex items-center gap-4">
-              <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">{user?.name || 'User'}</p>
-                <p className="text-xs text-gray-500">{user?.email}</p>
+            <div className="hidden md:block flex-1" />
+            <div className="flex items-center gap-2 sm:gap-4 min-w-0">
+              <div className="text-right min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">{user?.name || 'User'}</p>
+                <p className="text-xs text-gray-500 hidden sm:block truncate">{user?.email}</p>
               </div>
-              <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 bg-primary rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
                 {user?.name?.[0] || 'U'}
               </div>
             </div>
@@ -147,7 +172,7 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-auto p-6">
+        <main className="flex-1 overflow-auto p-3 sm:p-6">
           <div className="max-w-7xl mx-auto">{children}</div>
         </main>
       </div>
