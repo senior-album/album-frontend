@@ -129,15 +129,15 @@ const DashboardPage: React.FC = () => {
 
   return (
     <Layout>
-      <div className="space-y-8">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">대시보드</h1>
-            <div className="flex items-center gap-3 mt-1">
-              <p className="text-gray-600">{facilityName}</p>
+      <div className="space-y-6 sm:space-y-8">
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+          <div className="min-w-0">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">대시보드</h1>
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1">
+              <p className="text-sm sm:text-base text-gray-600 truncate">{facilityName}</p>
               {facilityCode && (
                 <React.Fragment>
-                  <span className="text-gray-300">|</span>
+                  <span className="text-gray-300 hidden sm:inline">|</span>
                   <div className="flex items-center gap-1.5 bg-gray-100 px-2.5 py-1 rounded-md">
                     <span className="text-xs text-gray-500">시설코드:</span>
                     <code className="text-xs font-mono font-bold text-blue-600">{facilityCode}</code>
@@ -149,12 +149,12 @@ const DashboardPage: React.FC = () => {
               )}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             {user?.is_operator && (
               <>
                 <button
                   onClick={() => navigate('/admin/stats')}
-                  className="flex items-center gap-1.5 bg-blue-600 text-white px-4 py-3 rounded-lg font-medium hover:bg-blue-700 transition shadow-sm"
+                  className="flex items-center gap-1.5 bg-blue-600 text-white px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-blue-700 transition shadow-sm"
                   title="운영자 — 통계 대시보드 (홈)"
                 >
                   <Settings size={16} />
@@ -162,7 +162,7 @@ const DashboardPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => navigate('/admin/users')}
-                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-50 transition shadow-sm"
                   title="운영자 — 전체 유저 관리"
                 >
                   <Settings size={16} />
@@ -170,7 +170,7 @@ const DashboardPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => navigate('/admin/facilities')}
-                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-50 transition shadow-sm"
                   title="운영자 — 전체 시설 관리"
                 >
                   <Settings size={16} />
@@ -178,7 +178,7 @@ const DashboardPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => navigate('/admin/guardians')}
-                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-50 transition shadow-sm"
                   title="운영자 — 보호자 승인 현황 (전체 시설 across)"
                 >
                   <Settings size={16} />
@@ -186,7 +186,7 @@ const DashboardPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => navigate('/admin/photo-jobs')}
-                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-50 transition shadow-sm"
                   title="운영자 — 사진 처리 큐 모니터링"
                 >
                   <Settings size={16} />
@@ -194,7 +194,7 @@ const DashboardPage: React.FC = () => {
                 </button>
                 <button
                   onClick={() => navigate('/admin/legal-settings')}
-                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-4 py-3 rounded-lg font-medium hover:bg-gray-50 transition shadow-sm"
+                  className="flex items-center gap-1.5 bg-white border border-gray-200 text-gray-700 px-3 sm:px-4 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-medium hover:bg-gray-50 transition shadow-sm"
                   title="운영자 — 회사 정보 / 약관 본문 편집"
                 >
                   <Settings size={16} />
@@ -204,7 +204,7 @@ const DashboardPage: React.FC = () => {
             )}
             <button
               onClick={openModal}
-              className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-blue-700 transition shadow-md"
+              className="flex items-center gap-2 bg-blue-600 text-white px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-sm sm:text-base font-semibold hover:bg-blue-700 transition shadow-md"
             >
               <Upload size={20} />
               사진 업로드
