@@ -365,7 +365,7 @@ const DashboardPage: React.FC = () => {
           onClick={() => !isUploading && setShowUploadModal(false)}
         >
           <div
-            className="bg-white rounded-lg max-w-2xl w-full p-8"
+            className="bg-white rounded-lg max-w-2xl w-full p-6 sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-6">사진 업로드</h2>

@@ -592,7 +592,7 @@ const ResidentsPage: React.FC = () => {
           onClick={() => setShowModal(false)}
         >
           <div
-            className="bg-white rounded-lg max-w-md w-full p-8"
+            className="bg-white rounded-lg max-w-md w-full p-6 sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
@@ -673,7 +673,7 @@ const ResidentsPage: React.FC = () => {
           onClick={() => { setShowFaceModal(false); setFacePreview(null); setFaceFile(null); }}
         >
           <div
-            className="bg-white rounded-lg max-w-md w-full p-8"
+            className="bg-white rounded-lg max-w-md w-full p-6 sm:p-8"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 className="text-2xl font-bold text-gray-900 mb-6">
@@ -796,7 +796,7 @@ const ResidentsPage: React.FC = () => {
           onClick={() => setShowFaceListModal(false)}
         >
           <div
-            className="bg-white rounded-lg max-w-lg w-full p-8 max-h-[80vh] overflow-y-auto"
+            className="bg-white rounded-lg max-w-lg w-full p-6 sm:p-8 max-h-[80vh] overflow-y-auto"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-6">
@@ -913,7 +913,7 @@ const ResidentsPage: React.FC = () => {
             setInviteShare(null);
           }}
         >
-          <div className="bg-white rounded-lg max-w-md w-full p-8" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 sm:p-8" onClick={(e) => e.stopPropagation()}>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
               {inviteShare ? '초대 링크 공유' : '보호자 초대'}
             </h2>

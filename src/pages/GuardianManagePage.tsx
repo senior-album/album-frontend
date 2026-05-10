@@ -268,7 +268,7 @@ const GuardianManagePage: React.FC = () => {
           className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
           onClick={() => { setRejectModal(null); setRejectReason(''); }}
         >
-          <div className="bg-white rounded-lg max-w-md w-full p-8" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 sm:p-8" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-gray-900 mb-4">보호자 요청 거부</h2>
             <div className="mb-4">
               <label className="block text-sm font-semibold text-gray-900 mb-2">거부 사유 (선택)</label>
@@ -304,7 +304,7 @@ const GuardianManagePage: React.FC = () => {
           className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
           onClick={() => { setAssignModal(null); setAssignResidentId(''); }}
         >
-          <div className="bg-white rounded-lg max-w-md w-full p-8" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-lg max-w-md w-full p-6 sm:p-8" onClick={e => e.stopPropagation()}>
             <h2 className="text-xl font-bold text-gray-900 mb-2">입소자 배정</h2>
             <p className="text-sm text-gray-500 mb-4">
               시설코드로 요청한 보호자입니다. 연결할 입소자를 선택해주세요.
