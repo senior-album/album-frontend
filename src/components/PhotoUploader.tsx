@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, X } from 'lucide-react';
+import { Upload, X, Camera, ImageIcon } from 'lucide-react';
 
 interface PhotoUploaderProps {
   onUpload: (files: File[]) => Promise<void>;
@@ -10,6 +10,15 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onUpload, isLoading = fal
   const [dragOver, setDragOver] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // T-140: 모바일에서 카메라 우선 / 갤러리 선택 분리. capture 속성은 input 단독 분기.
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const appendFiles = (files: File[]) => {
+    if (files.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...files]);
+    }
+  };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -31,16 +40,15 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onUpload, isLoading = fal
     const files = Array.from(e.dataTransfer.files).filter((file) =>
       file.type.startsWith('image/')
     );
-
-    if (files.length > 0) {
-      setSelectedFiles((prev) => [...prev, ...files]);
-    }
+    appendFiles(files);
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const files = Array.from(e.target.files).filter((file) => file.type.startsWith('image/'));
-      setSelectedFiles((prev) => [...prev, ...files]);
+      appendFiles(files);
+      // 같은 파일 재선택 가능하도록 input 초기화
+      e.target.value = '';
     }
   };
 
@@ -61,13 +69,49 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onUpload, isLoading = fal
 
   return (
     <div className="space-y-4">
-      {/* Drag and Drop Area */}
+      {/* 모바일: 카메라 / 갤러리 두 버튼 (md 미만) */}
+      <div className="md:hidden grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => cameraInputRef.current?.click()}
+          className="flex flex-col items-center justify-center gap-2 p-4 bg-primary text-white rounded-lg hover:opacity-90 active:opacity-80 transition"
+        >
+          <Camera size={28} />
+          <span className="font-medium">사진 촬영</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => galleryInputRef.current?.click()}
+          className="flex flex-col items-center justify-center gap-2 p-4 bg-white border-2 border-primary text-primary rounded-lg hover:bg-blue-50 active:bg-blue-100 transition"
+        >
+          <ImageIcon size={28} />
+          <span className="font-medium">갤러리에서 선택</span>
+        </button>
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          multiple
+          accept="image/*"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+      </div>
+
+      {/* 데스크탑: 드래그 앤 드롭 영역 (md 이상) */}
       <div
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
+        className={`hidden md:block border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition ${
           dragOver
             ? 'border-primary bg-blue-50'
             : 'border-gray-300 bg-gray-50 hover:border-primary'
@@ -129,7 +173,8 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onUpload, isLoading = fal
                     e.preventDefault();
                     handleRemoveFile(index);
                   }}
-                  className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition"
+                  className="absolute top-1 right-1 bg-red-500 text-white p-1 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition"
+                  aria-label="파일 제거"
                 >
                   <X size={16} />
                 </button>
