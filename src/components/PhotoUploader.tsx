@@ -4,9 +4,16 @@ import { Upload, X, Camera, ImageIcon } from 'lucide-react';
 interface PhotoUploaderProps {
   onUpload: (files: File[]) => Promise<void>;
   isLoading?: boolean;
+  // T-308: 호출자가 chunk 분할 업로드 진행률 (처리한 파일 수 / 전체) 을 넘겨주면
+  // 업로드 버튼 라벨에 "(n / N)" 형태로 노출. 없으면 기존 "업로드 중..." 만.
+  progress?: { done: number; total: number } | null;
 }
 
-const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onUpload, isLoading = false }) => {
+const PhotoUploader: React.FC<PhotoUploaderProps> = ({
+  onUpload,
+  isLoading = false,
+  progress,
+}) => {
   const [dragOver, setDragOver] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -190,7 +197,11 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({ onUpload, isLoading = fal
             disabled={isLoading || selectedFiles.length === 0}
             className="w-full bg-primary text-white py-3 rounded-lg font-medium hover:bg-primary hover:opacity-90 transition disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isLoading ? '업로드 중...' : `${selectedFiles.length}개 사진 업로드`}
+            {isLoading
+              ? progress
+                ? `업로드 중... (${progress.done} / ${progress.total})`
+                : '업로드 중...'
+              : `${selectedFiles.length}개 사진 업로드`}
           </button>
         </div>
       )}
