@@ -1,8 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Filter, Loader2, Image, Heart, Share2, Link2, Copy, X, Eye, EyeOff, CheckSquare, Square, Tag, Plus, UserPlus, Trash2 } from 'lucide-react';
 import Layout from '../components/Layout';
 import PhotoUploader from '../components/PhotoUploader';
+import PhotoLightbox, { LightboxPhoto } from '../components/PhotoLightbox';
 import { apiClient } from '../utils/api';
 import { Photo, Resident } from '../types';
 
@@ -33,7 +34,9 @@ const PhotosPage: React.FC = () => {
   const [copiedLink, setCopiedLink] = useState(false);
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [tagModal, setTagModal] = useState<Photo | null>(null);
+  // T-313: 라이트박스 + 사이드바 태그 패널. lightboxIndex 는 filteredPhotos 의 인덱스.
+  // photos 갱신 시 사이드바도 자동 최신화 (currentPhoto = filteredPhotos[lightboxIndex] 로 lookup).
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [tagLoading, setTagLoading] = useState(false);
 
   // 페이지네이션 상태
@@ -99,14 +102,6 @@ const PhotosPage: React.FC = () => {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // tagModal이 열려있을 때 photos 갱신되면 모달도 갱신
-  useEffect(() => {
-    if (tagModal) {
-      const updated = photos.find((p) => p.id === tagModal.id);
-      if (updated) setTagModal(updated);
-    }
-  }, [photos]);
 
   // 처리 중인 사진이 있으면 자동 새로고침
   useEffect(() => {
@@ -238,8 +233,10 @@ const PhotosPage: React.FC = () => {
     }
   };
 
-  const openTagModal = (photo: Photo) => {
-    if (!selectMode) setTagModal(photo);
+  const openLightbox = (photo: Photo) => {
+    if (selectMode) return;
+    const idx = filteredPhotos.findIndex((p) => p.id === photo.id);
+    if (idx >= 0) setLightboxIndex(idx);
   };
 
   const handleAddTag = async (photoId: string, residentId: string) => {
@@ -247,15 +244,6 @@ const PhotosPage: React.FC = () => {
     try {
       await apiClient.addPhotoTag(photoId, residentId);
       await fetchData();
-      // 모달 사진 정보도 갱신
-      const updated = photos.find((p) => p.id === photoId);
-      if (updated) {
-        // fetchData로 갱신되니 tagModal도 갱신
-        setTagModal((prev) => {
-          if (!prev || prev.id !== photoId) return prev;
-          return { ...prev }; // re-render trigger
-        });
-      }
     } catch (err: any) {
       const msg = err?.response?.data?.detail || '태그 추가 실패';
       alert(msg);
@@ -281,7 +269,7 @@ const PhotosPage: React.FC = () => {
     if (!confirm('이 사진을 삭제하시겠습니까? 삭제 후 복구할 수 없습니다.')) return;
     try {
       await apiClient.deletePhoto(photoId);
-      setTagModal(null);
+      setLightboxIndex(null);
       setPhotos((prev) => prev.filter((p) => p.id !== photoId));
     } catch (err) {
       console.error('Delete failed:', err);
@@ -354,6 +342,30 @@ const PhotosPage: React.FC = () => {
     acc[date].push(photo);
     return acc;
   }, {} as Record<string, Photo[]>);
+
+  // T-313: 라이트박스용 매핑 — filteredPhotos 변경 시에만 재계산.
+  const lightboxPhotos: LightboxPhoto[] = useMemo(
+    () =>
+      filteredPhotos.map((p) => ({
+        id: p.id,
+        original_url: p.original_url,
+        thumbnail_url: p.thumbnail_url ?? null,
+        resident_name: p.matched_residents?.[0]?.resident_name ?? null,
+        created_at: p.created_at,
+      })),
+    [filteredPhotos],
+  );
+
+  // 라이트박스가 가리키는 현재 사진 — photos 가 갱신되면 자동으로 최신.
+  const currentLightboxPhoto =
+    lightboxIndex !== null ? filteredPhotos[lightboxIndex] ?? null : null;
+
+  // 인덱스가 filteredPhotos 길이를 벗어나면 (filter 변경, 사진 삭제 등) 닫음.
+  useEffect(() => {
+    if (lightboxIndex !== null && lightboxIndex >= filteredPhotos.length) {
+      setLightboxIndex(null);
+    }
+  }, [filteredPhotos.length, lightboxIndex]);
 
   return (
     <Layout>
@@ -502,7 +514,7 @@ const PhotosPage: React.FC = () => {
                     {groupPhotos.map((photo) => (
                       <div
                         key={photo.id}
-                        onClick={() => selectMode ? toggleSelect(photo.id) : openTagModal(photo)}
+                        onClick={() => selectMode ? toggleSelect(photo.id) : openLightbox(photo)}
                         className={`group relative bg-gray-100 rounded-lg overflow-hidden aspect-square hover:shadow-lg transition cursor-pointer ${
                           selectMode && selectedIds.has(photo.id) ? 'ring-3 ring-blue-500' : ''
                         }`}
@@ -664,25 +676,14 @@ const PhotosPage: React.FC = () => {
         </div>
       )}
 
-      {/* 태그 수정 모달 */}
-      {tagModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50" onClick={() => setTagModal(null)}>
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 overflow-hidden" onClick={(e) => e.stopPropagation()}>
-            {/* 사진 미리보기 */}
-            <div className="relative bg-gray-900">
-              <img
-                src={tagModal.original_url || tagModal.thumbnail_url}
-                alt="photo"
-                className="w-full max-h-72 object-contain"
-              />
-              <button
-                onClick={() => setTagModal(null)}
-                className="absolute top-3 right-3 p-1.5 rounded-full bg-black/50 text-white hover:bg-black/70 transition"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
+      {/* T-313: 사진 관리 라이트박스 + 우측 사이드바 (모바일은 하단) — 좌우 키/ESC/줌/스크롤은 라이트박스 기본 동작 */}
+      <PhotoLightbox
+        photos={lightboxPhotos}
+        index={lightboxIndex}
+        onClose={() => setLightboxIndex(null)}
+        onIndexChange={setLightboxIndex}
+        sidebar={
+          currentLightboxPhoto && (
             <div className="p-5 space-y-4">
               {/* 현재 태그 */}
               <div>
@@ -691,10 +692,7 @@ const PhotosPage: React.FC = () => {
                   현재 분류된 입소자
                 </h4>
                 {(() => {
-                  // photos state에서 최신 정보 가져오기
-                  const currentPhoto = photos.find((p) => p.id === tagModal.id);
-                  const currentTags = currentPhoto?.matched_residents || tagModal.matched_residents || [];
-
+                  const currentTags = currentLightboxPhoto.matched_residents || [];
                   if (currentTags.length === 0) {
                     return (
                       <p className="text-sm text-gray-400 py-2">
@@ -702,7 +700,6 @@ const PhotosPage: React.FC = () => {
                       </p>
                     );
                   }
-
                   return (
                     <div className="flex flex-wrap gap-2">
                       {currentTags.map((mr) => (
@@ -717,7 +714,7 @@ const PhotosPage: React.FC = () => {
                             </span>
                           )}
                           <button
-                            onClick={() => handleRemoveTag(tagModal.id, mr.resident_id)}
+                            onClick={() => handleRemoveTag(currentLightboxPhoto.id, mr.resident_id)}
                             disabled={tagLoading}
                             className="ml-0.5 p-0.5 rounded-full hover:bg-blue-200 transition disabled:opacity-50"
                             title="태그 제거"
@@ -738,13 +735,11 @@ const PhotosPage: React.FC = () => {
                   입소자 태그 추가
                 </h4>
                 {(() => {
-                  const currentPhoto = photos.find((p) => p.id === tagModal.id);
-                  const currentTags = currentPhoto?.matched_residents || tagModal.matched_residents || [];
+                  const currentTags = currentLightboxPhoto.matched_residents || [];
                   const taggedIds = new Set(currentTags.map((mr) => mr.resident_id));
                   const availableResidents = residents.filter(
                     (r) => r.is_active && !taggedIds.has(r.id)
                   );
-
                   if (availableResidents.length === 0) {
                     return (
                       <p className="text-sm text-gray-400 py-1">
@@ -752,13 +747,12 @@ const PhotosPage: React.FC = () => {
                       </p>
                     );
                   }
-
                   return (
                     <div className="flex flex-wrap gap-2">
                       {availableResidents.map((r) => (
                         <button
                           key={r.id}
-                          onClick={() => handleAddTag(tagModal.id, r.id)}
+                          onClick={() => handleAddTag(currentLightboxPhoto.id, r.id)}
                           disabled={tagLoading}
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-gray-100 text-gray-700 hover:bg-green-100 hover:text-green-800 transition disabled:opacity-50"
                         >
@@ -771,27 +765,51 @@ const PhotosPage: React.FC = () => {
                 })()}
               </div>
 
-              {/* 사진 상태 + 삭제 */}
-              <div className="pt-3 border-t flex items-center justify-between">
-                <div className="text-xs text-gray-400">
-                  <span>
-                    상태: {tagModal.is_processed ? '분류됨' : '미분류'} ·{' '}
-                    {tagModal.is_public ? '공개' : '비공개'}
-                  </span>
-                  <span className="ml-2">{new Date(tagModal.created_at).toLocaleString('ko-KR')}</span>
+              {/* 공개/비공개 토글 + 사진 상태 */}
+              <div className="pt-3 border-t space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">공개 여부</span>
+                  <button
+                    onClick={() => handleTogglePublish(currentLightboxPhoto.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-lg transition ${
+                      currentLightboxPhoto.is_public
+                        ? 'bg-green-50 text-green-700 hover:bg-green-100'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {currentLightboxPhoto.is_public ? (
+                      <>
+                        <Eye size={14} />
+                        공개 (클릭하여 비공개)
+                      </>
+                    ) : (
+                      <>
+                        <EyeOff size={14} />
+                        비공개 (클릭하여 공개)
+                      </>
+                    )}
+                  </button>
                 </div>
+                <div className="text-xs text-gray-400">
+                  상태: {currentLightboxPhoto.is_processed ? '분류됨' : '미분류'} ·{' '}
+                  {new Date(currentLightboxPhoto.created_at).toLocaleString('ko-KR')}
+                </div>
+              </div>
+
+              {/* 삭제 */}
+              <div className="pt-2 border-t">
                 <button
-                  onClick={() => handleDeletePhoto(tagModal.id)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition"
+                  onClick={() => handleDeletePhoto(currentLightboxPhoto.id)}
+                  className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition"
                 >
                   <Trash2 size={14} />
-                  삭제
+                  사진 삭제
                 </button>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )
+        }
+      />
     </Layout>
   );
 };
