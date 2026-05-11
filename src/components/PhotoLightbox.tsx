@@ -14,13 +14,16 @@ interface PhotoLightboxProps {
   index: number | null;
   onClose: () => void;
   onIndexChange: (newIndex: number) => void;
+  // T-313: 사진 관리 페이지에서 라이트박스 우측(데스크탑) / 하단(모바일) 에
+  // 태그 편집 패널을 끼워 넣기 위한 slot. 보호자 갤러리는 전달 안 함.
+  sidebar?: React.ReactNode;
 }
 
 const ZOOM_STEP = 1.5;
 const ZOOM_MIN = 1;
 const ZOOM_MAX = 6;
 
-const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, onIndexChange }) => {
+const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, onIndexChange, sidebar }) => {
   const isOpen = index !== null && index >= 0 && index < photos.length;
   const photo = isOpen ? photos[index] : null;
 
@@ -130,15 +133,32 @@ const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, o
   const canZoomIn = zoom < ZOOM_MAX;
   const canZoomOut = zoom > ZOOM_MIN;
 
+  // T-313: sidebar 가 있으면 데스크탑은 좌우 분할 (이미지 + 사이드바),
+  // 모바일은 상하 분할 (이미지 위 / 사이드바 아래) 로 레이아웃 전환.
+  // 사이드바 없으면 기존 풀스크린 중앙 정렬 유지.
+  const hasSidebar = Boolean(sidebar);
+
   return (
     <div
-      className="fixed inset-0 z-50 bg-black bg-opacity-90 flex items-center justify-center select-none"
+      className={`fixed inset-0 z-50 bg-black bg-opacity-90 select-none ${
+        hasSidebar
+          ? 'flex flex-col md:flex-row'
+          : 'flex items-center justify-center'
+      }`}
       onClick={onClose}
       onWheel={onWheel}
       role="dialog"
       aria-modal="true"
       aria-label="사진 확대보기"
     >
+      {/* 이미지/툴바 영역 — sidebar 가 있으면 flex 자식, 없으면 부모 통째로 사용 */}
+      <div
+        className={
+          hasSidebar
+            ? 'relative flex-1 min-h-0 flex items-center justify-center overflow-hidden'
+            : 'contents'
+        }
+      >
       {/* 상단 툴바 */}
       <div
         className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3 text-white z-10"
@@ -238,7 +258,11 @@ const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, o
           draggable={false}
           onLoad={() => setLoaded(true)}
           onError={() => setLoaded(true)}
-          className="max-w-[95vw] max-h-[88vh] object-contain transition-opacity duration-150"
+          className={`object-contain transition-opacity duration-150 ${
+            hasSidebar
+              ? 'max-w-full max-h-[50vh] md:max-h-[88vh]'
+              : 'max-w-[95vw] max-h-[88vh]'
+          }`}
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transformOrigin: 'center center',
@@ -254,6 +278,19 @@ const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, o
       >
         ← → · 휠 이동 · + − 확대/축소 · 0 원래크기 · ESC 닫기
       </div>
+      </div>
+
+      {/* T-313: 사이드바 — 데스크탑은 우측 360px, 모바일은 하단 50vh.
+          자체 스크롤. 라이트박스 dim 클릭 닫힘과 충돌하지 않게 stopPropagation. */}
+      {hasSidebar && (
+        <div
+          className="bg-white md:w-[360px] md:flex-none w-full flex-1 min-h-0 overflow-y-auto md:max-h-screen border-t md:border-t-0 md:border-l border-gray-200"
+          onClick={(e) => e.stopPropagation()}
+          onWheel={(e) => e.stopPropagation()}
+        >
+          {sidebar}
+        </div>
+      )}
     </div>
   );
 };
