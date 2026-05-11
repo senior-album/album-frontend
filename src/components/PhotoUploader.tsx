@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Upload, Loader2, Camera, ImageIcon } from 'lucide-react';
+import { Upload, Loader2, Camera, ImageIcon, X } from 'lucide-react';
 
 interface PhotoUploaderProps {
   onUpload: (files: File[]) => Promise<void>;
@@ -7,6 +7,9 @@ interface PhotoUploaderProps {
   // T-308: 호출자가 chunk 분할 업로드 진행률 (처리한 파일 수 / 전체) 을 넘겨주면
   // dropzone 라벨에 "(n / N)" 형태로 노출.
   progress?: { done: number; total: number } | null;
+  // T-312: 호출자가 AbortController 를 들고 있어 onCancel 을 넘기면 진행 표시 옆에
+  // "취소" 버튼 노출. 누르면 진행 중 chunk 요청이 즉시 abort.
+  onCancel?: () => void;
 }
 
 // T-310: 선택 즉시 업로드. 업로드된 사진은 어차피 is_public=false 비공개라
@@ -16,6 +19,7 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({
   onUpload,
   isLoading = false,
   progress,
+  onCancel,
 }) => {
   const [dragOver, setDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -135,6 +139,20 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({
               </div>
               <h3 className="font-semibold text-gray-900 mb-1">{progressLabel}</h3>
               <p className="text-sm text-gray-500">잠시만 기다려주세요</p>
+              {onCancel && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    // dropzone 의 onClick (파일 picker) 으로 버블 차단
+                    e.stopPropagation();
+                    onCancel();
+                  }}
+                  className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition text-sm font-medium cursor-pointer"
+                >
+                  <X size={16} />
+                  취소
+                </button>
+              )}
             </React.Fragment>
           ) : (
             <React.Fragment>
@@ -157,7 +175,17 @@ const PhotoUploader: React.FC<PhotoUploaderProps> = ({
       {isLoading && (
         <div className="md:hidden flex items-center justify-center gap-3 p-4 bg-gray-50 rounded-lg">
           <Loader2 size={20} className="text-primary animate-spin" />
-          <span className="font-medium text-gray-700">{progressLabel}</span>
+          <span className="font-medium text-gray-700 flex-1 text-center">{progressLabel}</span>
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="inline-flex items-center gap-1 px-3 py-1.5 bg-white border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition text-sm font-medium"
+            >
+              <X size={14} />
+              취소
+            </button>
+          )}
         </div>
       )}
     </div>

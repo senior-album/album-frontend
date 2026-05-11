@@ -226,9 +226,10 @@ class ApiClient {
 
   // ==================== Photos ====================
 
-  public uploadPhoto(_facilityId: string, photoData: FormData) {
+  public uploadPhoto(_facilityId: string, photoData: FormData, signal?: AbortSignal) {
     return this.instance.post(`/photos/upload?facility_id=${_facilityId}`, photoData, {
       headers: { 'Content-Type': 'multipart/form-data' },
+      signal,
     });
   }
 
@@ -242,7 +243,8 @@ class ApiClient {
     facilityId: string,
     files: File[],
     onProgress?: (processed: number, total: number) => void,
-  ): Promise<{ uploadedCount: number; failed: File[] }> {
+    signal?: AbortSignal,
+  ): Promise<{ uploadedCount: number; failed: File[]; skipped: File[]; cancelled: boolean }> {
     const MAX_CHUNK_BYTES = 40 * 1024 * 1024; // nginx 50M - multipart overhead 여유
     const MAX_CHUNK_COUNT = 8;
 
@@ -263,24 +265,41 @@ class ApiClient {
     if (cur.length > 0) chunks.push(cur);
 
     const failed: File[] = [];
+    const skipped: File[] = [];
     let uploadedCount = 0;
     let processed = 0;
+    let cancelled = false;
     onProgress?.(0, files.length);
 
-    for (const chunk of chunks) {
+    // T-312: 매 chunk 시작 시 abort 체크 + axios 호출에 signal 전달.
+    // abort 시 진행 중 multipart 요청은 즉시 끊김 (CanceledError),
+    // 끊긴 chunk + 이후 미시작 chunk 들의 파일은 skipped 로 분리.
+    for (let i = 0; i < chunks.length; i++) {
+      const chunk = chunks[i];
+      if (signal?.aborted) {
+        cancelled = true;
+        for (let j = i; j < chunks.length; j++) skipped.push(...chunks[j]);
+        break;
+      }
       try {
         const fd = new FormData();
         for (const f of chunk) fd.append('files', f);
-        await this.uploadPhoto(facilityId, fd);
+        await this.uploadPhoto(facilityId, fd, signal);
         uploadedCount += chunk.length;
       } catch (e) {
+        if (signal?.aborted || axios.isCancel(e)) {
+          cancelled = true;
+          skipped.push(...chunk);
+          for (let j = i + 1; j < chunks.length; j++) skipped.push(...chunks[j]);
+          break;
+        }
         failed.push(...chunk);
       }
       processed += chunk.length;
       onProgress?.(processed, files.length);
     }
 
-    return { uploadedCount, failed };
+    return { uploadedCount, failed, skipped, cancelled };
   }
 
   // ==================== Photo Like/Share ====================
