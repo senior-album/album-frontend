@@ -94,17 +94,27 @@ const DashboardPage: React.FC = () => {
     }
   };
 
+  // T-312: AbortController 로 진행 중 chunk 즉시 abort.
+  const uploadAbortRef = useRef<AbortController | null>(null);
+
   const handleUpload = async () => {
     if (selectedFiles.length === 0 || !facilityId) return;
+    const controller = new AbortController();
+    uploadAbortRef.current = controller;
     setIsUploading(true);
     setUploadProgress({ done: 0, total: selectedFiles.length });
     try {
-      const { uploadedCount, failed } = await apiClient.uploadPhotos(
+      const { uploadedCount, failed, skipped, cancelled } = await apiClient.uploadPhotos(
         facilityId,
         selectedFiles,
         (done, total) => setUploadProgress({ done, total }),
+        controller.signal,
       );
-      if (failed.length > 0) {
+      if (cancelled) {
+        alert(`업로드를 취소했습니다. ${uploadedCount}장 업로드 완료, ${skipped.length}장 건너뜀.`);
+        // 건너뛴 파일은 selectedFiles 에 남겨 사용자가 재시도 / 제거 가능.
+        setSelectedFiles(skipped);
+      } else if (failed.length > 0) {
         alert(`${uploadedCount}장 업로드 성공, ${failed.length}장 실패. 잠시 후 다시 시도해주세요.`);
         // 실패한 사진은 selectedFiles 에 남겨 사용자가 재시도 / 제거 가능.
         setSelectedFiles(failed);
@@ -117,9 +127,14 @@ const DashboardPage: React.FC = () => {
       console.error('Upload failed:', err);
       alert('Upload failed');
     } finally {
+      uploadAbortRef.current = null;
       setIsUploading(false);
       setUploadProgress(null);
     }
+  };
+
+  const cancelUpload = () => {
+    uploadAbortRef.current?.abort();
   };
 
   const openModal = () => {
@@ -430,13 +445,13 @@ const DashboardPage: React.FC = () => {
               </div>
             )}
 
+            {/* T-312: 업로드 중에는 좌측 버튼이 "모달 닫기" → "업로드 취소" 로 의미 변경. */}
             <div className="flex gap-3">
               <button
-                onClick={() => setShowUploadModal(false)}
-                disabled={isUploading}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition disabled:opacity-50"
+                onClick={isUploading ? cancelUpload : () => setShowUploadModal(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
               >
-                취소
+                {isUploading ? '업로드 취소' : '취소'}
               </button>
               <button
                 onClick={handleUpload}

@@ -124,17 +124,25 @@ const PhotosPage: React.FC = () => {
   // T-140: PhotoUploader 컴포넌트가 모바일 카메라/갤러리 분리 + 데스크탑 드래그앤드롭을
   // 통합 처리. 여기서는 실제 업로드 호출만 책임.
   // T-308: chunk 분할 (apiClient.uploadPhotos) — 30장+ 한 요청은 nginx 50M 초과로 413.
+  // T-312: AbortController 로 진행 중 chunk 즉시 abort. cancelled 분기 안내 메시지.
+  const uploadAbortRef = useRef<AbortController | null>(null);
+
   const doUpload = async (files: File[]) => {
     if (files.length === 0 || !facilityId) return;
+    const controller = new AbortController();
+    uploadAbortRef.current = controller;
     setIsUploading(true);
     setUploadProgress({ done: 0, total: files.length });
     try {
-      const { uploadedCount, failed } = await apiClient.uploadPhotos(
+      const { uploadedCount, failed, skipped, cancelled } = await apiClient.uploadPhotos(
         facilityId,
         files,
         (done, total) => setUploadProgress({ done, total }),
+        controller.signal,
       );
-      if (failed.length > 0) {
+      if (cancelled) {
+        alert(`업로드를 취소했습니다. ${uploadedCount}장 업로드 완료, ${skipped.length}장 건너뜀.`);
+      } else if (failed.length > 0) {
         alert(`${uploadedCount}장 업로드 성공, ${failed.length}장 실패. 잠시 후 다시 시도해주세요.`);
       }
       await fetchData();
@@ -142,9 +150,14 @@ const PhotosPage: React.FC = () => {
       console.error('Upload failed:', err);
       alert('Upload failed');
     } finally {
+      uploadAbortRef.current = null;
       setIsUploading(false);
       setUploadProgress(null);
     }
+  };
+
+  const cancelUpload = () => {
+    uploadAbortRef.current?.abort();
   };
 
   const handleLike = async (photoId: string) => {
@@ -371,6 +384,7 @@ const PhotosPage: React.FC = () => {
             onUpload={doUpload}
             isLoading={isUploading}
             progress={uploadProgress}
+            onCancel={cancelUpload}
           />
         </div>
 
