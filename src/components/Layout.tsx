@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Home, Users, Image, Shield, Menu, X, KeyRound, BarChart3, UserCheck, Calendar } from 'lucide-react';
+import { LogOut, Home, Users, Image, Shield, Menu, X, KeyRound, BarChart3, UserCheck, Calendar, UserCog, Building2, ShieldCheck, Activity, LineChart, Scale } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useFacilityPermission } from '../hooks/useFacilityPermission';
 import { PERMISSION_KEYS } from '../types';
@@ -46,6 +46,18 @@ const Layout: React.FC<LayoutProps> = ({ children, isSidebarHidden = false }) =>
     // T-150: 시설장만 — 직원 메뉴 권한 위임
     ...(user?.is_admin
       ? [{ path: '/facility/permissions', icon: KeyRound, label: '메뉴 권한 위임' }]
+      : []),
+    // T-319: 운영자 전용 어드민 메뉴 (T-144~T-148). 그동안 라우트만 있고 nav 에
+    // 미노출이라 URL 직접 입력해야 진입 가능했음. is_operator 가 켜진 계정에만 노출.
+    ...(user?.is_operator
+      ? [
+          { path: '/admin/users', icon: UserCog, label: '운영 · 전체 유저' },
+          { path: '/admin/facilities', icon: Building2, label: '운영 · 전체 시설' },
+          { path: '/admin/guardians', icon: ShieldCheck, label: '운영 · 보호자 승인' },
+          { path: '/admin/photo-jobs', icon: Activity, label: '운영 · 사진 처리 큐' },
+          { path: '/admin/stats', icon: LineChart, label: '운영 · 통계' },
+          { path: '/admin/legal-settings', icon: Scale, label: '운영 · 약관/방침' },
+        ]
       : []),
   ];
 
