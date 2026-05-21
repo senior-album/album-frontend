@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   User, Phone, Mail, Building2, Heart, Shield, Bell, BellOff,
-  ChevronLeft, Loader2, Edit3, Check, X, Image as ImageIcon,
+  ChevronLeft, Loader2, Edit3, Check, X, Image as ImageIcon, EyeOff, XCircle,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { apiClient } from '../utils/api';
@@ -59,6 +59,13 @@ const GuardianMyPage: React.FC = () => {
   const [editPhone, setEditPhone] = useState('');
   const [saving, setSaving] = useState(false);
 
+  // T-323: 본인이 신청 취소(pending) / 거부 이력 숨김(rejected) 확인 모달
+  const [confirmAction, setConfirmAction] = useState<{
+    type: 'cancel' | 'dismiss';
+    guardian: GuardianshipInfo;
+  } | null>(null);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+
   const fetchData = useCallback(async () => {
     try {
       const [profileRes, statusRes, residentsRes, photosRes] = await Promise.all([
@@ -110,6 +117,27 @@ const GuardianMyPage: React.FC = () => {
       setNotificationEnabled(newValue);
     } catch (err) {
       console.error('Notification toggle failed:', err);
+    }
+  };
+
+  // T-323
+  const handleConfirmGuardianAction = async () => {
+    if (!confirmAction) return;
+    const { type, guardian } = confirmAction;
+    setProcessingId(guardian.guardian_id);
+    try {
+      if (type === 'cancel') {
+        await apiClient.cancelGuardianRequest(guardian.guardian_id);
+      } else {
+        await apiClient.dismissGuardianRequest(guardian.guardian_id);
+      }
+      setGuardianships((prev) => prev.filter((g) => g.guardian_id !== guardian.guardian_id));
+      setConfirmAction(null);
+    } catch (err: any) {
+      console.error('Guardian action failed:', err);
+      alert(err?.response?.data?.detail || '처리에 실패했습니다.');
+    } finally {
+      setProcessingId(null);
     }
   };
 
@@ -308,30 +336,54 @@ const GuardianMyPage: React.FC = () => {
               승인 상태
             </h3>
             <div className="space-y-3">
-              {guardianships.map((g) => (
-                <div key={g.guardian_id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0">
-                  <div>
-                    <p className="text-sm font-medium text-gray-900">
-                      {g.facility_name} · {g.resident_name}
-                    </p>
-                    {g.relationship_type && (
-                      <p className="text-xs text-gray-500">{g.relationship_type}</p>
-                    )}
-                  </div>
-                  {g.is_approved ? (
-                    <span className="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">승인됨</span>
-                  ) : g.is_rejected ? (
-                    <div className="text-right">
-                      <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">거부됨</span>
-                      {g.reject_reason && (
+              {guardianships.map((g) => {
+                return (
+                  <div key={g.guardian_id} className="flex items-center justify-between py-2 border-b border-gray-100 last:border-0 gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {g.facility_name} · {g.resident_name}
+                      </p>
+                      {g.relationship_type && (
+                        <p className="text-xs text-gray-500">{g.relationship_type}</p>
+                      )}
+                      {g.is_rejected && g.reject_reason && (
                         <p className="text-xs text-red-500 mt-1">{g.reject_reason}</p>
                       )}
                     </div>
-                  ) : (
-                    <span className="px-2.5 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">대기 중</span>
-                  )}
-                </div>
-              ))}
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      {g.is_approved ? (
+                        <span className="px-2.5 py-1 bg-green-100 text-green-700 text-xs font-medium rounded-full">승인됨</span>
+                      ) : g.is_rejected ? (
+                        <>
+                          <span className="px-2.5 py-1 bg-red-100 text-red-700 text-xs font-medium rounded-full">거부됨</span>
+                          <button
+                            onClick={() => setConfirmAction({ type: 'dismiss', guardian: g })}
+                            disabled={processingId === g.guardian_id}
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition disabled:opacity-50"
+                            aria-label="이력 숨기기"
+                          >
+                            <EyeOff size={12} />
+                            숨기기
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="px-2.5 py-1 bg-yellow-100 text-yellow-700 text-xs font-medium rounded-full">대기 중</span>
+                          <button
+                            onClick={() => setConfirmAction({ type: 'cancel', guardian: g })}
+                            disabled={processingId === g.guardian_id}
+                            className="flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded-full transition disabled:opacity-50"
+                            aria-label="신청 취소"
+                          >
+                            <XCircle size={12} />
+                            취소
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
             {pendingCount > 0 && (
               <p className="text-xs text-gray-500 mt-3">
@@ -377,6 +429,54 @@ const GuardianMyPage: React.FC = () => {
           </button>
         </section>
       </main>
+
+      {/* T-323: 신청 취소 / 거부 이력 숨김 확인 모달 */}
+      {confirmAction && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4"
+          onClick={() => processingId === null && setConfirmAction(null)}
+        >
+          <div className="bg-white rounded-2xl max-w-sm w-full p-6" onClick={(e) => e.stopPropagation()}>
+            <h2 className="text-lg font-bold text-gray-900 mb-2">
+              {confirmAction.type === 'cancel' ? '신청을 취소하시겠어요?' : '거부 이력을 숨기시겠어요?'}
+            </h2>
+            <p className="text-sm text-gray-600 mb-1">
+              <strong>{confirmAction.guardian.facility_name}</strong> · {confirmAction.guardian.resident_name}
+            </p>
+            <p className="text-xs text-gray-500 mb-5">
+              {confirmAction.type === 'cancel'
+                ? '시설로 보낸 연결 요청이 더 이상 처리되지 않습니다. 같은 시설로 다시 신청할 수 있습니다.'
+                : '이 화면에서만 사라지며 시설 측 기록은 보존됩니다.'}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setConfirmAction(null)}
+                disabled={processingId !== null}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition disabled:opacity-50"
+              >
+                돌아가기
+              </button>
+              <button
+                onClick={handleConfirmGuardianAction}
+                disabled={processingId !== null}
+                className={`flex-1 px-4 py-2 rounded-lg text-white font-medium transition disabled:opacity-50 ${
+                  confirmAction.type === 'cancel'
+                    ? 'bg-red-500 hover:bg-red-600'
+                    : 'bg-gray-700 hover:bg-gray-800'
+                }`}
+              >
+                {processingId === confirmAction.guardian.guardian_id ? (
+                  <Loader2 size={16} className="animate-spin mx-auto" />
+                ) : confirmAction.type === 'cancel' ? (
+                  '신청 취소'
+                ) : (
+                  '숨기기'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
