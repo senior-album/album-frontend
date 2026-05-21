@@ -37,6 +37,8 @@ interface PhotoItem {
   original_url: string;
   thumbnail_url: string | null;
   created_at: string;
+  like_count?: number;
+  liked_by_me?: boolean;
 }
 
 interface GuardianshipItem {
@@ -58,8 +60,10 @@ const GuardianGalleryPage: React.FC = () => {
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [facilityGroups, setFacilityGroups] = useState<FacilityGroup[]>([]);
   const [loading, setLoading] = useState(true);
-  const [favorites, setFavorites] = useState<Set<string>>(new Set());
   const [approvalStatus, setApprovalStatus] = useState<any>(null);
+  const [toast, setToast] = useState<string | null>(null);
+  const [likePending, setLikePending] = useState<Set<string>>(new Set());
+  const [sharePending, setSharePending] = useState<Set<string>>(new Set());
 
   // 필터
   const [selectedFacility, setSelectedFacility] = useState<string>('all');
@@ -213,13 +217,68 @@ const GuardianGalleryPage: React.FC = () => {
     }
   };
 
-  const toggleFavorite = (photoId: string) => {
-    setFavorites((prev) => {
-      const newSet = new Set(prev);
-      if (newSet.has(photoId)) newSet.delete(photoId);
-      else newSet.add(photoId);
-      return newSet;
-    });
+  const showToast = (msg: string) => {
+    setToast(msg);
+    window.setTimeout(() => setToast(null), 2500);
+  };
+
+  const handleLike = async (photoId: string) => {
+    if (likePending.has(photoId)) return;
+    setLikePending((prev) => new Set(prev).add(photoId));
+    try {
+      const res = await apiClient.toggleLike(photoId);
+      const { liked, like_count } = res.data as { liked: boolean; like_count: number };
+      setPhotos((prev) =>
+        prev.map((p) => (p.id === photoId ? { ...p, liked_by_me: liked, like_count } : p))
+      );
+    } catch (err) {
+      console.error('Like failed:', err);
+      showToast('좋아요 처리에 실패했습니다.');
+    } finally {
+      setLikePending((prev) => {
+        const next = new Set(prev);
+        next.delete(photoId);
+        return next;
+      });
+    }
+  };
+
+  // 보호자 화면 공유: 백엔드에서 토큰 URL 받아 Web Share API 우선, 미지원/취소 시 클립보드 복사 fallback.
+  const handleShare = async (photoId: string) => {
+    if (sharePending.has(photoId)) return;
+    setSharePending((prev) => new Set(prev).add(photoId));
+    try {
+      const res = await apiClient.createShareLink(photoId);
+      const { share_url } = res.data as { share_url: string; share_token: string; expires_at: string };
+      const sharePayload = { title: '시니어앨범 사진', text: '사진이 공유되었습니다', url: share_url };
+      // navigator.share 는 모바일 위주 — canShare 로 1차 거름, AbortError(사용자 취소) 는 무시.
+      const nav = navigator as Navigator & { canShare?: (d: ShareData) => boolean };
+      const canShare = typeof nav.share === 'function' && (!nav.canShare || nav.canShare(sharePayload));
+      if (canShare) {
+        try {
+          await nav.share(sharePayload);
+          return;
+        } catch (e: any) {
+          if (e?.name === 'AbortError') return;
+          // 일부 데스크탑 브라우저: 권한 거부 → clipboard fallback 으로 흘려보냄
+        }
+      }
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(share_url);
+        showToast('공유 링크가 복사되었습니다');
+      } else {
+        window.prompt('공유 링크를 복사해 사용하세요', share_url);
+      }
+    } catch (err) {
+      console.error('Share failed:', err);
+      showToast('공유 링크 생성에 실패했습니다.');
+    } finally {
+      setSharePending((prev) => {
+        const next = new Set(prev);
+        next.delete(photoId);
+        return next;
+      });
+    }
   };
 
   // 필터링된 사진
@@ -616,19 +675,31 @@ const GuardianGalleryPage: React.FC = () => {
                                       (e.target as HTMLImageElement).src = 'data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="200" fill="%23f5f0eb"><rect width="200" height="200"/><text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="%239ca3af" font-size="14">Photo</text></svg>';
                                     }}
                                   />
-                                  <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition flex items-center justify-center gap-2">
+                                  {/* 좋아요/공유: 데스크탑 hover 의존 제거 — 모바일 터치도 보이도록 우상단 고정 */}
+                                  <div className="absolute top-2 right-2 flex flex-col gap-1.5">
                                     <button
-                                      onClick={(e) => { e.stopPropagation(); toggleFavorite(photo.id); }}
-                                      className="opacity-0 group-hover:opacity-100 transition bg-white rounded-full p-2 hover:bg-red-50"
+                                      onClick={(e) => { e.stopPropagation(); handleLike(photo.id); }}
+                                      disabled={likePending.has(photo.id)}
+                                      aria-label={photo.liked_by_me ? '좋아요 취소' : '좋아요'}
+                                      className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-sm hover:bg-red-50 disabled:opacity-50 transition flex items-center gap-1"
                                     >
-                                      <Heart size={18}
-                                        className={favorites.has(photo.id) ? 'text-red-500 fill-red-500' : 'text-gray-600'} />
+                                      <Heart size={16}
+                                        className={photo.liked_by_me ? 'text-red-500 fill-red-500' : 'text-gray-600'} />
+                                      {(photo.like_count ?? 0) > 0 && (
+                                        <span className="text-xs font-medium text-gray-700 pr-0.5">{photo.like_count}</span>
+                                      )}
                                     </button>
                                     <button
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="opacity-0 group-hover:opacity-100 transition bg-white rounded-full p-2 hover:bg-blue-50"
+                                      onClick={(e) => { e.stopPropagation(); handleShare(photo.id); }}
+                                      disabled={sharePending.has(photo.id)}
+                                      aria-label="사진 공유"
+                                      className="bg-white/90 backdrop-blur-sm rounded-full p-2 shadow-sm hover:bg-blue-50 disabled:opacity-50 transition"
                                     >
-                                      <Share2 size={18} className="text-blue-600" />
+                                      {sharePending.has(photo.id) ? (
+                                        <Loader2 size={16} className="text-blue-600 animate-spin" />
+                                      ) : (
+                                        <Share2 size={16} className="text-blue-600" />
+                                      )}
                                     </button>
                                   </div>
                                 </div>
@@ -689,6 +760,16 @@ const GuardianGalleryPage: React.FC = () => {
         onClose={() => setLightboxIndex(null)}
         onIndexChange={setLightboxIndex}
       />
+
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-gray-900/90 text-white text-sm px-4 py-2 rounded-full shadow-lg"
+        >
+          {toast}
+        </div>
+      )}
     </div>
   );
 };
