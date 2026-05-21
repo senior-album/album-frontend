@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Minus, Plus, RotateCcw, X } from 'lucide-react';
+import type { PhotoFace } from '../types';
+import FaceBboxOverlay from './FaceBboxOverlay';
 
 export interface LightboxPhoto {
   id: string;
@@ -7,6 +9,8 @@ export interface LightboxPhoto {
   thumbnail_url: string | null;
   resident_name?: string | null;
   created_at: string;
+  // T-324: 직원 동선 — 사진 위에 얼굴 bbox + 입소자 이름 라벨 오버레이.
+  faces?: PhotoFace[];
 }
 
 interface PhotoLightboxProps {
@@ -30,6 +34,8 @@ const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, o
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [loaded, setLoaded] = useState(false);
+  // T-324: bbox 좌표 정규화를 위한 원본 px 사이즈.
+  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
 
   const dragRef = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(null);
   // 휠 한 번 굴림에 한 사진씩만 넘어가도록 throttle (트랙패드는 이벤트가 수십 번 폭발)
@@ -39,6 +45,7 @@ const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, o
     setZoom(1);
     setPan({ x: 0, y: 0 });
     setLoaded(false);
+    setNaturalSize(null);
   }, []);
 
   // 인덱스가 바뀌면 줌/팬 초기화 + 이미지 로딩 상태 리셋
@@ -251,24 +258,42 @@ const PhotoLightbox: React.FC<PhotoLightboxProps> = ({ photos, index, onClose, o
         {!loaded && (
           <Loader2 className="absolute animate-spin text-white opacity-70" size={48} />
         )}
-        <img
-          key={photo.id}
-          src={photo.original_url}
-          alt={photo.resident_name || '사진'}
-          draggable={false}
-          onLoad={() => setLoaded(true)}
-          onError={() => setLoaded(true)}
-          className={`object-contain transition-opacity duration-150 ${
-            hasSidebar
-              ? 'max-w-full max-h-[50vh] md:max-h-[88vh]'
-              : 'max-w-[95vw] max-h-[88vh]'
-          }`}
+        {/* T-324: img + FaceBboxOverlay 를 같은 wrapper 에 두고 transform 을
+            wrapper 에 걸어 zoom/pan 시 bbox 도 같이 움직이게 한다. inline-block 으로
+            wrapper 가 img 의 실제 렌더 사이즈를 따라가 bbox `inset-0` overlay 가 정확히
+            덮음. */}
+        <div
+          className="relative inline-block transition-opacity duration-150"
           style={{
             transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
             transformOrigin: 'center center',
             opacity: loaded ? 1 : 0,
           }}
-        />
+        >
+          <img
+            key={photo.id}
+            src={photo.original_url}
+            alt={photo.resident_name || '사진'}
+            draggable={false}
+            onLoad={(e) => {
+              setLoaded(true);
+              const el = e.currentTarget;
+              setNaturalSize({ w: el.naturalWidth, h: el.naturalHeight });
+            }}
+            onError={() => setLoaded(true)}
+            className={`block object-contain ${
+              hasSidebar
+                ? 'max-w-full max-h-[50vh] md:max-h-[88vh]'
+                : 'max-w-[95vw] max-h-[88vh]'
+            }`}
+          />
+          <FaceBboxOverlay
+            faces={photo.faces}
+            naturalWidth={naturalSize?.w ?? null}
+            naturalHeight={naturalSize?.h ?? null}
+            variant="lightbox"
+          />
+        </div>
       </div>
 
       {/* 하단 도움말 (데스크톱만) */}
