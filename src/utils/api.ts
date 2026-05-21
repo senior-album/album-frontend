@@ -418,6 +418,16 @@ class ApiClient {
     return this.instance.post('/guardians/me/connect', data);
   }
 
+  // T-323: 보호자 본인이 대기 중인 시설 연결 신청 취소 (soft delete).
+  public cancelGuardianRequest(guardianId: string) {
+    return this.instance.delete(`/guardians/me/connect/${guardianId}`);
+  }
+
+  // T-323: 거부된 시설 연결 신청을 본인 화면에서만 숨김 (감사 이력은 보존).
+  public dismissGuardianRequest(guardianId: string) {
+    return this.instance.post(`/guardians/me/${guardianId}/dismiss`);
+  }
+
   public getFacilityInvitations(facilityId: string) {
     return this.instance.get(`/invitations/facility/${facilityId}`);
   }
