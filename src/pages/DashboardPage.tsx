@@ -104,20 +104,24 @@ const DashboardPage: React.FC = () => {
     setIsUploading(true);
     setUploadProgress({ done: 0, total: selectedFiles.length });
     try {
-      const { uploadedCount, failed, skipped, cancelled } = await apiClient.uploadPhotos(
+      const { uploadedCount, failed, skipped, cancelled, duplicates } = await apiClient.uploadPhotos(
         facilityId,
         selectedFiles,
         (done, total) => setUploadProgress({ done, total }),
         controller.signal,
       );
+      // T-325: 중복(같은 시설 hash 일치) 안내 — 모든 분기에 부가 표시.
+      const dupNote = duplicates.length > 0 ? ` 중복 ${duplicates.length}장 건너뜀.` : '';
       if (cancelled) {
-        alert(`업로드를 취소했습니다. ${uploadedCount}장 업로드 완료, ${skipped.length}장 건너뜀.`);
-        // 건너뛴 파일은 selectedFiles 에 남겨 사용자가 재시도 / 제거 가능.
+        alert(`업로드를 취소했습니다. ${uploadedCount}장 업로드 완료, ${skipped.length}장 건너뜀.${dupNote}`);
         setSelectedFiles(skipped);
       } else if (failed.length > 0) {
-        alert(`${uploadedCount}장 업로드 성공, ${failed.length}장 실패. 잠시 후 다시 시도해주세요.`);
-        // 실패한 사진은 selectedFiles 에 남겨 사용자가 재시도 / 제거 가능.
+        alert(`${uploadedCount}장 업로드 성공, ${failed.length}장 실패.${dupNote} 잠시 후 다시 시도해주세요.`);
         setSelectedFiles(failed);
+      } else if (duplicates.length > 0) {
+        alert(`${uploadedCount}장 업로드 성공. 이미 업로드된 사진 ${duplicates.length}장은 건너뜀.`);
+        setSelectedFiles([]);
+        setShowUploadModal(false);
       } else {
         setSelectedFiles([]);
         setShowUploadModal(false);

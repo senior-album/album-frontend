@@ -2,6 +2,15 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+// T-325: /photos/upload 응답의 duplicates[] 항목 — chunk 별 응답에서 누적된다.
+export interface UploadDuplicate {
+  filename: string;
+  file_hash: string;
+  reason: 'duplicate_in_facility' | 'duplicate_in_batch';
+  existing_photo_id?: string;
+  duplicate_of_filename?: string;
+}
+
 class ApiClient {
   private instance: AxiosInstance;
 
@@ -244,7 +253,14 @@ class ApiClient {
     files: File[],
     onProgress?: (processed: number, total: number) => void,
     signal?: AbortSignal,
-  ): Promise<{ uploadedCount: number; failed: File[]; skipped: File[]; cancelled: boolean }> {
+  ): Promise<{
+    uploadedCount: number;
+    failed: File[];
+    skipped: File[];
+    cancelled: boolean;
+    // T-325: 백엔드 hash dedup 으로 건너뛴 항목.
+    duplicates: UploadDuplicate[];
+  }> {
     const MAX_CHUNK_BYTES = 40 * 1024 * 1024; // nginx 50M - multipart overhead 여유
     const MAX_CHUNK_COUNT = 8;
 
@@ -266,6 +282,7 @@ class ApiClient {
 
     const failed: File[] = [];
     const skipped: File[] = [];
+    const duplicates: UploadDuplicate[] = [];
     let uploadedCount = 0;
     let processed = 0;
     let cancelled = false;
@@ -274,6 +291,7 @@ class ApiClient {
     // T-312: 매 chunk 시작 시 abort 체크 + axios 호출에 signal 전달.
     // abort 시 진행 중 multipart 요청은 즉시 끊김 (CanceledError),
     // 끊긴 chunk + 이후 미시작 chunk 들의 파일은 skipped 로 분리.
+    // T-325: chunk 응답의 duplicates[] 를 누적, uploadedCount 는 photos.length 기준.
     for (let i = 0; i < chunks.length; i++) {
       const chunk = chunks[i];
       if (signal?.aborted) {
@@ -284,8 +302,11 @@ class ApiClient {
       try {
         const fd = new FormData();
         for (const f of chunk) fd.append('files', f);
-        await this.uploadPhoto(facilityId, fd, signal);
-        uploadedCount += chunk.length;
+        const resp = await this.uploadPhoto(facilityId, fd, signal);
+        const photos = (resp.data?.photos as unknown[]) ?? [];
+        const dups = (resp.data?.duplicates as UploadDuplicate[]) ?? [];
+        uploadedCount += photos.length;
+        duplicates.push(...dups);
       } catch (e) {
         if (signal?.aborted || axios.isCancel(e)) {
           cancelled = true;
@@ -299,7 +320,7 @@ class ApiClient {
       onProgress?.(processed, files.length);
     }
 
-    return { uploadedCount, failed, skipped, cancelled };
+    return { uploadedCount, failed, skipped, cancelled, duplicates };
   }
 
   // ==================== Photo Like/Share ====================
