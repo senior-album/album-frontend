@@ -4,8 +4,40 @@ import { Filter, Loader2, Image, Heart, Share2, Link2, Copy, X, Eye, EyeOff, Che
 import Layout from '../components/Layout';
 import PhotoUploader from '../components/PhotoUploader';
 import PhotoLightbox, { LightboxPhoto } from '../components/PhotoLightbox';
+import FaceBboxOverlay from '../components/FaceBboxOverlay';
 import { apiClient } from '../utils/api';
-import { Photo, Resident } from '../types';
+import { Photo, PhotoFace, Resident } from '../types';
+
+// T-324: 그리드 섬네일 — onLoad 에서 natural 사이즈를 잡아 bbox 오버레이. object-cover
+// 라 섬네일은 약간 잘려 보이지만 (라이트박스 정밀 표시에 비해), 어디에 얼굴이 있는지
+// 한눈에 보이는 디버그용으로 충분.
+interface GridThumbnailProps {
+  src: string;
+  alt: string;
+  faces?: PhotoFace[];
+}
+const GridThumbnail: React.FC<GridThumbnailProps> = ({ src, alt, faces }) => {
+  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
+  return (
+    <>
+      <img
+        src={src}
+        alt={alt}
+        className="w-full h-full object-cover"
+        onLoad={(e) => {
+          const el = e.currentTarget;
+          setNaturalSize({ w: el.naturalWidth, h: el.naturalHeight });
+        }}
+      />
+      <FaceBboxOverlay
+        faces={faces}
+        naturalWidth={naturalSize?.w ?? null}
+        naturalHeight={naturalSize?.h ?? null}
+        variant="thumbnail"
+      />
+    </>
+  );
+};
 
 // T-031: 미처리 = detected_unmatched | no_model | no_face (pending/queued 는 진행 중, classified/completed 는 성공이라 제외)
 const UNPROCESSED_STATUSES: ReadonlyArray<string> = ['detected_unmatched', 'no_model', 'no_face'];
@@ -357,6 +389,7 @@ const PhotosPage: React.FC = () => {
   }, {} as Record<string, Photo[]>);
 
   // T-313: 라이트박스용 매핑 — filteredPhotos 변경 시에만 재계산.
+  // T-324: faces 도 같이 전달 — 라이트박스 안에서 bbox 오버레이.
   const lightboxPhotos: LightboxPhoto[] = useMemo(
     () =>
       filteredPhotos.map((p) => ({
@@ -365,6 +398,7 @@ const PhotosPage: React.FC = () => {
         thumbnail_url: p.thumbnail_url ?? null,
         resident_name: p.matched_residents?.[0]?.resident_name ?? null,
         created_at: p.created_at,
+        faces: p.faces,
       })),
     [filteredPhotos],
   );
@@ -533,10 +567,10 @@ const PhotosPage: React.FC = () => {
                           selectMode && selectedIds.has(photo.id) ? 'ring-3 ring-blue-500' : ''
                         }`}
                       >
-                        <img
+                        <GridThumbnail
                           src={photo.thumbnail_url || photo.original_url}
                           alt="uploaded"
-                          className="w-full h-full object-cover"
+                          faces={photo.faces}
                         />
                         {/* 선택 모드 체크박스 */}
                         {selectMode && (

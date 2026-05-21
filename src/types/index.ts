@@ -44,6 +44,22 @@ export interface MatchedResident {
   confidence?: number;
 }
 
+// T-324: 얼굴 감지 bbox + 매칭된 입소자. 좌표는 원본 이미지 px 기준. 직원/운영자
+// 응답에만 채워짐 (보호자 동선은 비어있음 — PII 누출 방지).
+export interface PhotoFace {
+  id: string;
+  photo_id: string;
+  resident_id?: string;
+  resident_name?: string;
+  bbox_x1: number;
+  bbox_y1: number;
+  bbox_x2: number;
+  bbox_y2: number;
+  confidence: number;
+  is_confirmed: boolean;
+  is_rejected: boolean;
+}
+
 export interface Photo {
   id: string;
   facility_id: string;
@@ -54,6 +70,7 @@ export interface Photo {
   processing_status: string;
   created_at: string;
   matched_residents?: MatchedResident[];
+  faces?: PhotoFace[];
   is_public?: boolean;
   like_count?: number;
   liked_by_me?: boolean;
