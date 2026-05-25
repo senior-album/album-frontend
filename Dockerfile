@@ -3,7 +3,7 @@
 
 # Stage 1: 빌드
 # 베이스 이미지 digest pin (T-053) — tag 이동으로 인한 공급망 리스크 차단
-FROM node:26-alpine@sha256:e71ac5e964b9201072425d59d2e876359efa25dc96bb1768cb73295728d6e4ea AS builder
+FROM node:26-alpine@sha256:7c6af15abe4e3de859690e7db171d0d711bf37d27528eddfe625b2fe89e097f8 AS builder
 
 WORKDIR /build
 
